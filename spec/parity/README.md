@@ -48,7 +48,8 @@ submodule changes: `mcp_parity.py record` (against a freshly started
 - **Every corpus case**: the `content` array, byte for byte. Use `--semantic`
   to accept JSON that only differs in formatting. When the reference returns
   an error, the port only has to return an error too; its wording may differ.
-  `structuredContent` is not compared.
+  The error must come from the same tool: if the tool isn't published on the
+  target, the case fails. `structuredContent` is not compared.
 
 The golden files pin `:parity` semantics. `:fixed` mode (PLAN §1B) will need
 its own expected directory.

@@ -15,8 +15,9 @@ golden set or compares a target against the golden set.
 Compared: HTTP/session behaviour (status codes, Mcp-Session-Id presence,
 WWW-Authenticate), tools/list (names, descriptions, input schemas without
 pydantic "title" keys) and every corpus case (content, isError). For cases the
-reference answers with an error, only "it is an error" is compared: the port is
-allowed to word errors differently. structuredContent is ignored.
+reference answers with an error, only "it is an error" is compared (from the
+same tool: a tool missing on the target never counts): the port is allowed to
+word errors differently. structuredContent is ignored.
 """
 import argparse
 import difflib
@@ -231,6 +232,10 @@ def compare_tools(expected, actual):
     return problems
 
 
+def _tool_names(tools_response):
+    return {t["name"] for t in tools_response.get("result", {}).get("tools", [])}
+
+
 def _is_error(resp):
     return "error" in resp or "_http_status" in resp or resp.get("result", {}).get("isError") is True
 
@@ -302,10 +307,18 @@ def check(servers, exp_dir, semantic, only=None, http_only=False):
     if not only:
         for name, resp in tools.items():
             report(f"tools/list {name}", compare_tools(json.loads((exp_dir / "tools" / f"{name}.json").read_text()), resp))
+    published = {name: _tool_names(resp) for name, resp in tools.items()}
     for cid, data in cases.items():
         exp_file = exp_dir / "cases" / f"{cid}.json"
         if not exp_file.exists():
             report(f"case {cid}", ["no expected output recorded"])
+            continue
+        case = data["case"]
+        tool = case.get("tool", "query_data_collections")
+        expected_published = _tool_names(json.loads((exp_dir / "tools" / f"{case['server']}.json").read_text()))
+        # An expected error only matches an error from the same tool, not "tool not found".
+        if tool in expected_published and tool not in published[case["server"]]:
+            report(f"case {cid}", [f"tool {tool!r} is not published on the {case['server']} server"])
             continue
         report(f"case {cid}", compare_case(json.loads(exp_file.read_text())["response"], data["response"], semantic))
 

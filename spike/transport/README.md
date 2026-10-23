@@ -5,11 +5,9 @@ and `RorMcp::Server` (C4) are written in M1. `spike.rb` mounts two `mcp` gem
 servers shaped like the reference app's (`/mcp` stateful, `/mcp/analytics`
 stateless + bearer) in a plain Rack app.
 
-```sh
-bundle exec rspec spec/spike                                   # 19 examples pin the findings below
-bundle exec rackup spike/transport/config.ru -p 3766 -o 127.0.0.1
-.venv/bin/python spec/parity/client/mcp_parity.py check --http-only --base-url http://127.0.0.1:3766   # 11/11
-```
+> The spike code was removed in M1. Its design became `lib/ror_mcp/endpoint.rb` and
+> `lib/ror_mcp/server.rb`, and its specs became `spec/ror_mcp/endpoint_spec.rb`.
+> These findings are kept as the record of why the endpoint is built this way.
 
 ## Result
 

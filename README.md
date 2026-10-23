@@ -24,10 +24,11 @@ Licensed under the **MIT License**.
 ---
 
 > [!IMPORTANT]
-> **Pre-release: the API below is the target, not yet the implementation.**
-> The gem is at milestone **M0**: gemspec, test harness and transport spike are done; the
-> features are built milestone by milestone (see [Project status](#project-status)). Each
-> section is marked with the milestone that delivers it. The design lives in
+> **Pre-release: most of the API below is the target, not yet the implementation.**
+> Milestone **M1** is done: servers, the Rack endpoint, authentication, sessions and
+> `get_server_instructions` work. Collections and tools are next. Features are built milestone
+> by milestone (see [Project status](#project-status)), and each section is marked with the
+> milestone that delivers it. The design lives in
 > [`PLAN.md`](PLAN.md).
 
 ---
@@ -54,7 +55,7 @@ Licensed under the **MIT License**.
 | Milestone | Delivers | Status |
 |---|---|---|
 | **M0** | Gemspec, Django reference app + recorded golden output, Rails dummy app, parity client, transport spike | ✅ done (CI matrix open) |
-| **M1** | `RorMcp::Server`, `RorMcp::Endpoint`, authentication, session stores, `get_server_instructions` | planned |
+| **M1** | `RorMcp::Server`, `RorMcp::Endpoint`, authentication, session stores, `get_server_instructions` | ✅ done: the Rails app matches all 11 recorded HTTP/session scenarios |
 | **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | planned |
 | **M3** | `$lookup`, references, multiple servers | planned |
 | **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | planned |

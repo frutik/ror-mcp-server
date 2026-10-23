@@ -504,7 +504,7 @@ resolve, budget).
 | # | Deliverable | Done when |
 |---|---|---|
 | M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed. **Done:** reference app, golden recordings, parity client, Rails dummy app with matching schema/data; gemspec (loads in the dummy app); transport spike passes 11/11 HTTP parity scenarios (`spike/transport/README.md`). **Open:** CI matrix |
-| M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools |
+| M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools. **Done:** `spec/dummy` passes 11/11 HTTP parity scenarios, and the Python SDK client lists and calls tools on both servers. Full corpus: 15/120 (the rest needs M2–M5). `SessionStore::Null` dropped: stateless servers skip the store |
 | M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass |
 | M3 | `$lookup`, references, thin join targets, multiple servers | §3 rows for name clashes, class-name registry, proxy/STI refs and `_id` mangling green |
 | M4 | `$group`, `$text/$search`, `extra_filters`, computed fields (incl. via `$lookup`) | Full parity suite green |

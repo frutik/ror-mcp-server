@@ -1,7 +1,6 @@
 # Mirrors spec/parity/django_app/refproject/settings.py + urls.py.
-# Until the gem ships the DSL (RorMcp::Collection, M2), app/mcp
-# is ignored by the autoloader (config/application.rb) and nothing is mounted.
-return unless defined?(RorMcp::Collection)
+# app/mcp (collections, toolsets) stays out of autoloading until the gem ships
+# RorMcp::Collection (M2); see config/application.rb.
 
 RorMcp.configure do |c|
   c.pipeline_semantics = :parity

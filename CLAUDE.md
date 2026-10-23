@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-M0 nearly done (CI matrix open). The gem is a skeleton: the gemspec and `lib/ror_mcp.rb` load, but no components exist yet. The transport design for M1 comes from `spike/transport/` (throwaway code; findings in its README). The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
+M1 done (M0's CI matrix still open). `lib/ror_mcp/` has Configuration, Server (wraps `MCP::Server`), Endpoint (Rack: auth → Django session rules → SDK transport, stateless + JSON), SessionStore::{Memory,Cache} and Engine. The SDK findings behind that design are in `spike/transport/README.md`. Next is M2: Collection DSL, schema, `query_data_collections`. The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
 
 ## Commands
 
@@ -12,8 +12,7 @@ M0 nearly done (CI matrix open). The gem is a skeleton: the gemspec and `lib/ror
 # Gem (repo root); Ruby >= 3.2 on PATH, gems install into vendor/bundle
 bundle install
 bundle exec rspec                                        # all specs (spec/dummy and spec/parity are excluded)
-bundle exec rspec spec/spike/transport_spike_spec.rb:42  # one example
-bundle exec rackup spike/transport/config.ru -p 3766 -o 127.0.0.1   # serve the transport spike
+bundle exec rspec spec/ror_mcp/endpoint_spec.rb:90      # one example (line of an `it`)
 
 # Python side (reference app + clients); .venv is git-ignored
 python -m venv .venv && .venv/bin/pip install -r spec/parity/requirements.txt
@@ -26,7 +25,7 @@ PATH=/opt/homebrew/opt/ruby/bin:$PATH spec/parity/bin/rails-server   # reset DB,
 .venv/bin/python spec/parity/client/compare_dbs.py                                       # both DBs identical
 .venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765  # Rails vs golden
 .venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765 --only group-null,lookup-basic
-.venv/bin/python spec/parity/client/mcp_parity.py check --http-only --base-url http://127.0.0.1:3766  # HTTP/session rules only (M1 gate)
+.venv/bin/python spec/parity/client/mcp_parity.py check --http-only --base-url http://127.0.0.1:3765  # HTTP/session rules only (M1 gate)
 .venv/bin/python spec/parity/client/sdk_smoke.py --base-url http://127.0.0.1:3765         # official MCP SDK client
 .venv/bin/python spec/parity/client/mcp_parity.py record   # re-record golden from :8765, then review the diff
 ```
