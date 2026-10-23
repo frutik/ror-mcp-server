@@ -28,8 +28,10 @@ module RorMcp
     def call(env)
       server = RorMcp.server(@server_key)
 
+      request = build_request(env)
+      RorMcp.current_request = request
       if server.authenticator
-        context = server.authenticator.call(build_request(env))
+        context = server.authenticator.call(request)
         return text_response(401, "Unauthorized", "www-authenticate" => "Bearer") unless context
 
         # The SDK hands this to tools as server_context[:auth_info].
@@ -52,6 +54,8 @@ module RorMcp
       env.delete(SESSION_ENV)
       status, headers, body = server.transport.call(env)
       [status, headers.merge(SESSION_HEADER => session_id), body]
+    ensure
+      RorMcp.current_request = nil
     end
 
     def inspect

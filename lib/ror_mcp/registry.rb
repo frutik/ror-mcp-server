@@ -9,8 +9,32 @@ module RorMcp
 
     def initialize
       @collections = []
+      @toolsets = []
       @version = 0
       @mutex = Mutex.new
+    end
+
+    # Called from Toolset.inherited.
+    def track_toolset(toolset_class)
+      @mutex.synchronize do
+        @toolsets << toolset_class
+        @version += 1
+      end
+    end
+
+    # The MCP tools of one server's toolsets. A tool name may appear once per server.
+    def toolset_tools_for(server_key)
+      server_key = server_key.to_sym
+      toolsets = @mutex.synchronize { @toolsets.dup }.select { |t| t.published? && t.server_key == server_key }
+      toolsets.each_with_object({}) do |toolset, by_name|
+        toolset.tools.each_key do |name|
+          if by_name.key?(name)
+            raise ConfigurationError, "Tool #{name.inspect} is published twice on server #{server_key.inspect}: " \
+                                      "#{by_name[name].name} and #{toolset.name}."
+          end
+          by_name[name] = toolset
+        end
+      end.values.uniq.flat_map(&:mcp_tools)
     end
 
     # Called from Collection.inherited, before the class body runs.
@@ -25,6 +49,7 @@ module RorMcp
     def clear
       @mutex.synchronize do
         @collections.clear
+        @toolsets.clear
         @version += 1
       end
     end
@@ -50,6 +75,7 @@ module RorMcp
 
     # Boot-time checks (no database access) for every server's collections.
     def validate!
+      @mutex.synchronize { @toolsets.dup }.select(&:published?).each(&:validate!)
       published.each(&:validate!)
       published.map(&:server_key).uniq.each { |key| collections_for(key) }
       true

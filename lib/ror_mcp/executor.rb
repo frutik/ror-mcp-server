@@ -34,15 +34,14 @@ module RorMcp
         return MCP::Tool::Response.new(collection.output_as_resource ? [text("No results found")] : [])
       end
 
-      raise Pipeline::NotYetSupported.new("output_format #{collection.output_format.inspect}", "M5") unless collection.output_format == :json
-
-      body = Renderers::Json.render(rows)
+      renderer = Renderers.for(collection.output_format)
+      body = renderer.render(rows)
       return MCP::Tool::Response.new([text(body)]) unless collection.output_as_resource
 
       MCP::Tool::Response.new([
         text("Results attached"),
-        { type: "resource", resource: { uri: "resource://query_result/#{Renderers::Json::FORMAT}",
-                                        mimeType: Renderers::Json::MEDIA_TYPE, text: body } },
+        { type: "resource", resource: { uri: "resource://query_result/#{renderer::FORMAT}",
+                                        mimeType: renderer::MEDIA_TYPE, text: body } },
       ])
     end
 

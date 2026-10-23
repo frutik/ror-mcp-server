@@ -34,7 +34,7 @@ module RorMcp
       @stateless
     end
 
-    # Registers an extra MCP::Tool (toolsets add theirs in M5).
+    # Registers an extra, hand-built MCP::Tool (toolsets and collections register themselves).
     def add_tool(tool)
       @mutex.synchronize do
         @tools << tool
@@ -45,6 +45,7 @@ module RorMcp
     # In django-mcp-server's order: get_server_instructions, toolset tools, query_data_collections.
     def tools
       list = @instructions_tool ? [instructions_tool, *@tools] : @tools.dup
+      list.concat(RorMcp.registry.toolset_tools_for(@key))
       collections = RorMcp.registry.collections_for(@key)
       list << Tools::QueryTool.build(collections) unless collections.empty?
       list

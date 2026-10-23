@@ -25,10 +25,11 @@ Licensed under the **MIT License**.
 
 > [!IMPORTANT]
 > **Pre-release: most of the API below is the target, not yet the implementation.**
-> Milestones **M1–M4** are done: servers, the Rack endpoint, authentication, sessions,
-> collections and the whole `query_data_collections` pipeline (`$match $text $search $sort
-> $skip $limit $project $lookup $group`, extended operators, computed fields) work. Custom
-> tools and CSV output (M5) are next. Features are built milestone
+> Milestones **M1–M5** are done: everything django-mcp-server publishes (servers, auth,
+> sessions, collections, the full query pipeline, custom tools, CSV and embedded-resource
+> output) works, and the Rails test app returns the same answers as the Django reference app.
+> Still to come: the safety envelope and `:fixed` semantics (M6), then generators, rake tasks
+> and the first release (M7). Features are built milestone
 > by milestone (see [Project status](#project-status)), and each section is marked with the
 > milestone that delivers it. The design lives in
 > [`PLAN.md`](PLAN.md).
@@ -61,7 +62,7 @@ Licensed under the **MIT License**.
 | **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | ✅ done: descriptions match Django byte for byte; 78/120 parity cases pass |
 | **M3** | `$lookup`, references, multiple servers | ✅ done: every `$lookup` parity case passes; 88/120 overall |
 | **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | ✅ done: every query parity case passes (106/120; the rest is tools and CSV) |
-| **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | planned |
+| **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | ✅ done: **full parity**, 119/120 + 1 documented deviation |
 | **M6** | Read-only safety envelope, multi-database, sharding, description budget, instrumentation, `:fixed` semantics | planned |
 | **M7** | Generators, rake tasks, first release (0.1.0) | planned |
 
@@ -462,7 +463,10 @@ end
 ```
 
 - A new toolset instance handles each call, with `context` (from `authenticate`) and `request` available.
-- The return value becomes text content: strings as-is, other values as JSON.
+- The return value becomes content the way FastMCP converts it: a string as-is, a list as
+  one content per element, anything else as JSON indented by 2 (decimals as strings), `nil`
+  as no content. An `ActiveRecord::Relation` is loaded first. Returning an
+  `MCP::Tool::Response` passes it through unchanged.
 - An exception becomes an MCP tool error (`isError: true`) whose text describes the failure, as in django-mcp-server.
 - Tools run read-only unless declared `writes: true`.
 - Parameter types: `:string`, `:integer`, `:number`, `:boolean`, `:object`, and arrays as `[:type]`.

@@ -189,8 +189,15 @@ module RorMcp
         resolved = paths.map { |path| @fields.resolve(path) }
         columns = resolved.each_with_index.map { |r, i| r.attribute.as("c#{i}") }
         select_rows(relation.except(:select).select(*columns)).map do |row|
-          row.each_with_index.map { |value, i| resolved[i].type.deserialize(value) }
+          row.each_with_index.map { |value, i| read(resolved[i], value) }
         end
+      end
+
+      # A column value as Django returns it (decimals quantized to the column's scale).
+      def read(resolved, raw)
+        value = resolved.type.deserialize(raw)
+        column = resolved.field.respond_to?(:column) ? resolved.field.column : nil
+        column&.type == :decimal && !value.nil? ? PyDecimal.scaled(value, column.scale) : value
       end
 
       def select_rows(relation)
@@ -286,7 +293,7 @@ module RorMcp
         relation = relation.group(*resolved.map(&:attribute)) unless resolved.empty? || aggregates.empty?
 
         select_rows(relation).map do |row|
-          values = paths.each_with_index.to_h { |path, i| [path, resolved[i].type.deserialize(row[i])] }
+          values = paths.each_with_index.to_h { |path, i| [path, read(resolved[i], row[i])] }
           aggregates.each_with_index { |(key, (_, caster)), i| values[key] = cast_aggregate(caster, row[paths.size + i]) }
           values
         end
@@ -302,9 +309,9 @@ module RorMcp
         kind, reference = caster
         column = reference.field.respond_to?(:column) ? reference.field.column : nil
         if column&.type == :decimal
-          return Float(format("%.15g", Float(value))) if kind == :average
+          return PyDecimal.significant(value) if kind == :average
 
-          return BigDecimal(value.to_s).round(column.scale || 0)
+          return PyDecimal.scaled(value, column.scale)
         end
         return Float(value) if kind == :average
 

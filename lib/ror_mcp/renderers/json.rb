@@ -22,10 +22,30 @@ module RorMcp
         encode(value)
       end
 
+      # FastMCP's conversion of a tool's return value (pydantic's to_json with
+      # indent=2): like the compact form, but indented and decimals as strings.
+      def pretty(value, depth = 0)
+        pad = "  " * (depth + 1)
+        case value
+        when Hash
+          return "{}" if value.empty?
+
+          "{\n#{value.map { |k, v| "#{pad}#{string(k.to_s)}: #{pretty(v, depth + 1)}" }.join(",\n")}\n#{'  ' * depth}}"
+        when Array
+          return "[]" if value.empty?
+
+          "[\n#{value.map { |v| "#{pad}#{pretty(v, depth + 1)}" }.join(",\n")}\n#{'  ' * depth}]"
+        when BigDecimal then string(value.to_s("F"))
+        when PyDecimal then string(value.to_s)
+        else encode(value)
+        end
+      end
+
       def encode(value)
         case value
         when Hash then "{#{value.map { |k, v| "#{string(k.to_s)}:#{encode(v)}" }.join(',')}}"
         when Array then "[#{value.map { |v| encode(v) }.join(',')}]"
+        when PyDecimal then float(value.to_f)
         when String then string(value)
         when Symbol then string(value.to_s)
         when nil then "null"

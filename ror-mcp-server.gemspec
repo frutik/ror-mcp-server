@@ -27,6 +27,8 @@ Gem::Specification.new do |spec|
   # Official MCP Ruby SDK, kept below 2.0: the transport API moves fast (spike/transport/README.md).
   spec.add_dependency "mcp", "~> 1.8"
   spec.add_dependency "rack", ">= 2.2"
+  # CSV output; a bundled (not default) gem since Ruby 3.4.
+  spec.add_dependency "csv", ">= 3.2"
   spec.add_dependency "activerecord", ">= 7.1"
   spec.add_dependency "railties", ">= 7.1"
 end

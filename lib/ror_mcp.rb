@@ -7,8 +7,10 @@ require_relative "ror_mcp/version"
 require_relative "ror_mcp/configuration"
 require_relative "ror_mcp/session_store"
 require_relative "ror_mcp/python_repr"
+require_relative "ror_mcp/py_decimal"
 require_relative "ror_mcp/registry"
 require_relative "ror_mcp/collection"
+require_relative "ror_mcp/toolset"
 require_relative "ror_mcp/schema"
 require_relative "ror_mcp/pipeline/errors"
 require_relative "ror_mcp/pipeline/fields"
@@ -16,6 +18,7 @@ require_relative "ror_mcp/pipeline/lookups"
 require_relative "ror_mcp/pipeline/match"
 require_relative "ror_mcp/pipeline/compiler"
 require_relative "ror_mcp/renderers/json"
+require_relative "ror_mcp/renderers/csv"
 require_relative "ror_mcp/tools/query_tool_text"
 require_relative "ror_mcp/tools/query_tool"
 require_relative "ror_mcp/executor"
@@ -37,6 +40,15 @@ module RorMcp
 
     def configuration
       @configuration ||= Configuration.new
+    end
+
+    # The request being served, for toolsets (django-mcp-server puts it in a contextvar).
+    def current_request
+      Thread.current[:ror_mcp_request]
+    end
+
+    def current_request=(request)
+      Thread.current[:ror_mcp_request] = request
     end
 
     # Every Collection subclass, in definition order.
