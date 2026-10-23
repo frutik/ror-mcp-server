@@ -19,7 +19,8 @@ module RorMcp
 
       relation = collection.new(@context).scope(@context)
       Adapters.prepare(relation.connection)
-      rows = Pipeline::Compiler.new(collection, relation).rows(pipeline)
+      published = @collections.values.map(&:model)
+      rows = Pipeline::Compiler.new(collection, relation, published_models: published).rows(pipeline)
       respond(collection, rows)
     rescue Pipeline::QueryError, ActiveRecord::ActiveRecordError, ArgumentError, TypeError => e
       MCP::Tool::Response.new([{ type: "text", text: "Error executing tool #{Tools::QueryTool::NAME}: #{e.message}" }],

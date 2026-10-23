@@ -15,12 +15,15 @@ module RorMcp
       # Checked in this order, like the if/elif chain in django-mcp-server.
       STAGES = %w[$match $search $sort $skip $limit $project $group $lookup].freeze
 
-      def initialize(collection, relation)
+      # `published_models`: models of the collections on the same server, the
+      # only valid `$lookup.from` targets.
+      def initialize(collection, relation, published_models: [collection.model])
         @collection = collection
         @model = collection.model
         @relation = relation
         @fields = Fields.new(@model)
-        @match = Match.new(@fields, extra_filters: collection.extra_filters)
+        @lookups = Lookups.new(@fields, published_models)
+        @match = Match.new(@fields, translate: @lookups.method(:translate), extra_filters: collection.extra_filters)
         @high = nil
         @skip = nil
         @projection = nil
@@ -28,6 +31,8 @@ module RorMcp
 
       def rows(pipeline)
         raise QueryError, "search_pipeline must be a list of stages" unless pipeline.is_a?(Array)
+
+        pipeline.each { |stage| @lookups.register(stage["$lookup"]) if stage.is_a?(Hash) && stage.key?("$lookup") }
 
         pipeline.each_with_index do |stage, index|
           raise QueryError, "Each stage must be an object, got #{stage.inspect}" unless stage.is_a?(Hash)
@@ -40,7 +45,7 @@ module RorMcp
           when "$limit" then apply_limit(stage["$limit"])
           when "$project" then apply_project(stage["$project"], pipeline[(index + 1)..])
           when "$group" then raise NotYetSupported.new("$group", "M4")
-          when "$lookup" then raise NotYetSupported.new("$lookup", "M3")
+          when "$lookup" then next # registered above
           else raise QueryError, "Unsupported stage #{PythonRepr.dump(stage)} : please review pipeline syntax constraints"
           end
         end
@@ -63,8 +68,6 @@ module RorMcp
 
         # Django's order_by takes field names as given: no "_id" or alias translation.
         orders = spec.map do |field, direction|
-          raise QueryError, "Cannot resolve keyword '#{field}' into field." if field.to_s == "_id"
-
           attribute = @fields.attribute(field)
           [1, true].include?(direction) ? attribute.asc : attribute.desc
         end
@@ -85,10 +88,9 @@ module RorMcp
         # Output key → internal field name, as Django passes them to values().
         @projection = spec.each_with_object({}) do |(output, value), mapping|
           if value.is_a?(String) && value.start_with?("$")
-            path = value.delete_prefix("$")
-            mapping[output.to_s] = path == "_id" ? "pk" : path
+            mapping[output.to_s] = @lookups.translate(value.delete_prefix("$"))
           elsif python_truthy?(value)
-            mapping[output.to_s] = output.to_s == "_id" ? "pk" : output.to_s
+            mapping[output.to_s] = @lookups.translate(output.to_s)
           end
         end
       end
@@ -121,10 +123,23 @@ module RorMcp
         low.positive? ? relation.offset(low) : relation
       end
 
-      def pluck(relation, names)
-        attributes = names.map { |name| @fields.attribute(name) }
-        values = relation.pluck(*attributes)
-        attributes.size == 1 ? values.map { |v| [v] } : values
+      # Selects the paths under positional aliases and casts each value with the
+      # type of the model that owns its column (pluck would use the base model's).
+      def pluck(relation, paths)
+        resolved = paths.map { |path| @fields.resolve(path) }
+        columns = resolved.each_with_index.map { |r, i| r.attribute.as("c#{i}") }
+        relation = relation.except(:select).select(*columns)
+        relation = relation.joins(*@fields.joins) unless @fields.joins.empty?
+        types = resolved.map { |r| database_type(r.model, r.field.attname) }
+        relation.connection.select_all(relation.arel, "RorMcp").rows.map do |row|
+          row.each_with_index.map { |value, i| types[i].deserialize(value) }
+        end
+      end
+
+      # The column's own type: an enum attribute would return its keys, Django returns stored values.
+      def database_type(model, column)
+        type = model.type_for_attribute(column)
+        type.is_a?(ActiveRecord::Enum::EnumType) ? type.subtype : type
       end
 
       def assign(target, path, value)

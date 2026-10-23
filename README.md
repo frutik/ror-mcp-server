@@ -25,9 +25,9 @@ Licensed under the **MIT License**.
 
 > [!IMPORTANT]
 > **Pre-release: most of the API below is the target, not yet the implementation.**
-> Milestones **M1–M2** are done: servers, the Rack endpoint, authentication, sessions,
-> collections and `query_data_collections` with `$match $sort $skip $limit $project` work.
-> `$lookup` is next, then `$group`/search and tools. Features are built milestone
+> Milestones **M1–M3** are done: servers, the Rack endpoint, authentication, sessions,
+> collections and `query_data_collections` with `$match $sort $skip $limit $project $lookup`
+> work. `$group` and full-text search are next, then tools. Features are built milestone
 > by milestone (see [Project status](#project-status)), and each section is marked with the
 > milestone that delivers it. The design lives in
 > [`PLAN.md`](PLAN.md).
@@ -58,7 +58,7 @@ Licensed under the **MIT License**.
 | **M0** | Gemspec, Django reference app + recorded golden output, Rails dummy app, parity client, transport spike | ✅ done (CI matrix open) |
 | **M1** | `RorMcp::Server`, `RorMcp::Endpoint`, authentication, session stores, `get_server_instructions` | ✅ done: the Rails app matches all 11 recorded HTTP/session scenarios |
 | **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | ✅ done: descriptions match Django byte for byte; 78/120 parity cases pass |
-| **M3** | `$lookup`, references, multiple servers | planned |
+| **M3** | `$lookup`, references, multiple servers | ✅ done: every `$lookup` parity case passes; 88/120 overall |
 | **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | planned |
 | **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | planned |
 | **M6** | Read-only safety envelope, multi-database, sharding, description budget, instrumentation, `:fixed` semantics | planned |

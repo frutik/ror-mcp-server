@@ -7,8 +7,10 @@ module RorMcp
     class Match
       COMPARISONS = { "gt" => :gt, "gte" => :gteq, "lt" => :lt, "lte" => :lteq }.freeze
 
-      def initialize(fields, extra_filters: [])
+      # `translate` maps "_id" and "alias.field" to field paths (Lookups#translate).
+      def initialize(fields, translate:, extra_filters: [])
         @fields = fields
+        @translate = translate
         @extra_filters = extra_filters
       end
 
@@ -62,8 +64,8 @@ module RorMcp
       # One Django lookup. Under negation Django adds "col IS NOT NULL" for a
       # nullable column, so NOT (col = v) still matches rows where col is NULL.
       def lookup(field, kind, value, negated)
-        resolved = @fields.resolve(field)
-        attribute = @fields.attribute(field)
+        resolved = @fields.resolve(@translate.call(field))
+        attribute = resolved.attribute
         node =
           case kind
           when "exact" then value.nil? ? attribute.eq(nil) : attribute.eq(value)
@@ -76,7 +78,7 @@ module RorMcp
           else attribute.public_send(COMPARISONS.fetch(kind), value)
           end
 
-        if negated && kind != "isnull" && !value.nil? && resolved.column.null
+        if negated && kind != "isnull" && !value.nil? && resolved.nullable
           node = Arel::Nodes::Grouping.new(node.and(attribute.not_eq(nil)))
         end
         node

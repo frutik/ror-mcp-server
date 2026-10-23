@@ -134,7 +134,70 @@ RSpec.describe RorMcp::Pipeline::Compiler do
   end
 
   it "names the milestone of stages not built yet" do
-    expect { rows([{ "$lookup" => {} }]) }.to raise_error(RorMcp::Pipeline::NotYetSupported, /M3/)
     expect { rows([{ "$group" => { "_id" => nil } }]) }.to raise_error(RorMcp::Pipeline::NotYetSupported, /M4/)
+  end
+
+  describe "$lookup" do
+    let(:published) { [ShopDb::Order, ShopDb::Customer, ShopDb::Category, ShopDb::Product] }
+
+    def lookup_rows(pipeline, collection = orders)
+      described_class.new(collection, collection.model.all, published_models: published)
+                     .rows(JSON.parse(JSON.generate(pipeline)))
+    end
+
+    def customer_lookup(local = "customer", as: "c", from: "customer")
+      { "$lookup" => { "from" => from, "localField" => local, "foreignField" => "_id", "as" => as } }
+    end
+
+    it "joins through alias.field in $project and $match" do
+      result = lookup_rows([customer_lookup, { "$match" => { "c.country" => "BE" } }, { "$sort" => { "id" => 1 } },
+                            { "$project" => { "number" => 1, "who" => "$c.name" } }])
+      expect(result).to eq([{ "number" => "ORD-1", "who" => "Bram" }, { "number" => "ORD-2", "who" => "Bram" }])
+    end
+
+    it "reads every $lookup first, wherever it sits" do
+      result = lookup_rows([{ "$match" => { "c.name" => "Anna" } }, customer_lookup, { "$project" => { "id" => 1 } }])
+      expect(result).to eq([{ "id" => 3 }])
+    end
+
+    it "casts joined values with their own model's types" do
+      result = lookup_rows([customer_lookup("customer_id"), { "$sort" => { "id" => 1 } },
+                            { "$project" => { "id" => 1, "since" => "$c.signed_up_on", "active" => "$c.active" } }])
+      expect(result.first).to eq("id" => 1, "since" => Date.new(2023, 3, 30), "active" => true)
+    end
+
+    it "chains lookups through an alias and joins a model to itself" do
+      define_collection("CategoryCollection") { model ShopDb::Category; fields :all }
+      result = lookup_rows([{ "$lookup" => { "from" => "category", "localField" => "parent", "foreignField" => "_id", "as" => "p" } },
+                            { "$sort" => { "id" => 1 } }, { "$project" => { "name" => 1, "parent" => "$p.name" } }], CategoryCollection)
+      expect(result).to eq([{ "name" => "Electronics", "parent" => nil }, { "name" => "Laptops", "parent" => "Electronics" }])
+    end
+
+    it "does not apply the target collection's scope (django-mcp-server quirk)" do
+      result = lookup_rows([customer_lookup, { "$match" => { "c.active" => false } }, { "$project" => { "id" => 1 } }])
+      expect(result).to eq([{ "id" => 4 }])
+    end
+
+    it "accepts any published model as `from`, not only the reference's target (quirk)" do
+      result = lookup_rows([customer_lookup(from: "product"), { "$match" => { "_id" => 3 } }, { "$project" => { "who" => "$c.name" } }])
+      expect(result).to eq([{ "who" => "Anna" }])
+    end
+
+    it "mangles localField names containing _id (quirk)" do
+      expect { lookup_rows([customer_lookup("billing_identity", as: "b"), { "$match" => { "b.name" => "Anna" } }]) }
+        .to raise_error(RorMcp::Pipeline::QueryError, /Cannot resolve keyword 'billingentity'/)
+    end
+
+    it "rejects unpublished targets, non-references, bad foreignFields and unknown aliases" do
+      expect { lookup_rows([customer_lookup(from: "user")]) }.to raise_error(/Invalid lookup from collection 'user'/)
+      expect { lookup_rows([customer_lookup("status")]) }.to raise_error(/is not a reference/)
+      expect { lookup_rows([{ "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "name", "as" => "c" } }]) }
+        .to raise_error(/Invalid foreignField 'name'/)
+      expect { lookup_rows([{ "$match" => { "x.name" => 1 } }]) }.to raise_error(/Unknown lookup alias 'x'/)
+    end
+
+    it "does not translate aliases in $sort, like Django's order_by" do
+      expect { lookup_rows([customer_lookup, { "$sort" => { "c.name" => 1 } }]) }.to raise_error(/Cannot resolve keyword 'c.name'/)
+    end
   end
 end
