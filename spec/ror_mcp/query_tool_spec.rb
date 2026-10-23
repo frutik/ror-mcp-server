@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 RSpec.describe RorMcp::Tools::QueryTool do
-  before { ShopDb.setup! }
+  before do
+    ShopDb.setup!
+    RorMcp.configuration.pipeline_semantics = :parity
+  end
+
+  after { RorMcp.reset! }
 
   let!(:orders) do
     define_collection("OrderCollection") do

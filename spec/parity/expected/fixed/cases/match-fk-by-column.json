@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "FK by attname customer_id",
+    "id": "match-fk-by-column",
+    "pipeline": [
+      {
+        "$match": {
+          "customer_id": 2
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "customer_id": 1,
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 20,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"customer_id\":2},{\"number\":\"ORD-1002\",\"customer_id\":2},{\"number\":\"ORD-1005\",\"customer_id\":2},{\"number\":\"ORD-1006\",\"customer_id\":2},{\"number\":\"ORD-1009\",\"customer_id\":2},{\"number\":\"ORD-1014\",\"customer_id\":2}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -125,17 +125,27 @@ module RorMcp
       end
     end
 
-    # Runs one call: new instance, declared arguments only, FastMCP's conversion.
+    # Runs one call: new instance, declared arguments only, FastMCP's
+    # conversion. Tools not declared `writes: true` run in the read-only envelope.
     def self.call(tool, arguments, server_context)
+      Instrumentation.instrument("tool.ror_mcp", server: server_key, tool: tool.name) do |payload|
+        response = run(tool, arguments, server_context)
+        payload[:error] = response.content.first[:text] if response.error?
+        response
+      end
+    end
+
+    def self.run(tool, arguments, server_context)
       context = server_context.respond_to?(:auth_info) ? server_context.auth_info : nil
       instance = new(context: context, request: RorMcp.current_request)
       names = tool.params.map { |p| p.name.to_sym }
-      value = instance.public_send(tool.name, **arguments.transform_keys(&:to_sym).slice(*names))
-      value = value.to_a if defined?(ActiveRecord::Relation) && value.is_a?(ActiveRecord::Relation)
-      value = serialize(tool.serialize_with, value) if tool.serialize_with
-      return value if value.is_a?(MCP::Tool::Response)
-
-      MCP::Tool::Response.new(Tools::Content.from(value))
+      invoke = lambda do
+        value = instance.public_send(tool.name, **arguments.transform_keys(&:to_sym).slice(*names))
+        value = value.to_a if defined?(ActiveRecord::Relation) && value.is_a?(ActiveRecord::Relation)
+        value = serialize(tool.serialize_with, value) if tool.serialize_with
+        value.is_a?(MCP::Tool::Response) ? value : MCP::Tool::Response.new(Tools::Content.from(value))
+      end
+      tool.writes ? invoke.call : Envelope.read_only(&invoke)
     rescue StandardError => e
       MCP::Tool::Response.new([{ type: "text", text: "Error executing tool #{tool.name}: #{e.message}" }], error: true)
     end

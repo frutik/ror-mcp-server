@@ -1,0 +1,33 @@
+{
+  "case": {
+    "collection": "Order",
+    "covers": "collection name is case-insensitive",
+    "id": "collection-case",
+    "pipeline": [
+      {
+        "$match": {
+          "_id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 60,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: $sort does not translate lookup aliases → error",
+    "id": "sort-on-alias",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$sort": {
+          "c.name": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 43,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1011\"},{\"number\":\"ORD-1012\"},{\"number\":\"ORD-1013\"},{\"number\":\"ORD-1003\"},{\"number\":\"ORD-1001\"},{\"number\":\"ORD-1002\"},{\"number\":\"ORD-1005\"},{\"number\":\"ORD-1006\"},{\"number\":\"ORD-1009\"},{\"number\":\"ORD-1014\"},{\"number\":\"ORD-1004\"},{\"number\":\"ORD-1007\"},{\"number\":\"ORD-1008\"},{\"number\":\"ORD-1010\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

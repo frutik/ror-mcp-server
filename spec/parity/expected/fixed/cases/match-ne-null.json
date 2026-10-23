@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$ne null → NOT isnull",
+    "id": "match-ne-null",
+    "pipeline": [
+      {
+        "$match": {
+          "billing_identity": {
+            "$ne": null
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "billing_identity": 1,
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 7,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1004\",\"billing_identity\":5},{\"number\":\"ORD-1008\",\"billing_identity\":3},{\"number\":\"ORD-1012\",\"billing_identity\":4}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$text combined with a field condition",
+    "id": "text-plus-field",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "laptop"
+          },
+          "in_stock": true
+        }
+      },
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$project": {
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 32,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"LAP-001\"},{\"sku\":\"LAP-002\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

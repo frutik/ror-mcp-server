@@ -1,0 +1,35 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$text: AND across words, OR across fields, case-insensitive",
+    "id": "text-multi-word",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "GAMING laptop"
+          }
+        }
+      },
+      {
+        "$project": {
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 31,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"LAP-002\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

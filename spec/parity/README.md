@@ -56,8 +56,17 @@ submodule changes: `mcp_parity.py record` (against a freshly started
 - A case with `"parity_deviation"` in the corpus is an intended, documented
   difference (PLAN §1B). The checker reports it as `dev`, not as a failure.
 
-The golden files pin `:parity` semantics. `:fixed` mode (PLAN §1B) will need
-its own expected directory.
+`expected/django/` pins `:parity` semantics. `expected/fixed/` pins `:fixed`
+semantics (PLAN §1B). There is no reference implementation for those, so they
+were recorded from the dummy app and every difference from Django was reviewed:
+
+```sh
+RORMCP_SEMANTICS=fixed spec/parity/bin/rails-server &
+.venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765 --expected spec/parity/expected/fixed
+```
+
+Re-record them (`record --expected spec/parity/expected/fixed`) only for an
+intended change to `:fixed` behaviour, and review the diff.
 
 ## Port constraints the reference app revealed
 

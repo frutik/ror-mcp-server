@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "lineitem",
+    "covers": "group by a lookup alias field",
+    "id": "group-by-alias",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "p",
+          "foreignField": "_id",
+          "from": "product",
+          "localField": "product"
+        }
+      },
+      {
+        "$group": {
+          "_id": "$p.category",
+          "qty": {
+            "$sum": "$quantity"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 84,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"qty\":18,\"p\":{\"category\":2}},{\"qty\":29,\"p\":{\"category\":3}},{\"qty\":15,\"p\":{\"category\":5}},{\"qty\":12,\"p\":{\"category\":6}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

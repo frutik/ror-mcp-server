@@ -2,6 +2,7 @@
 
 require "rack"
 require "mcp"
+require "logger"
 require "active_record"
 require_relative "ror_mcp/version"
 require_relative "ror_mcp/configuration"
@@ -13,6 +14,7 @@ require_relative "ror_mcp/collection"
 require_relative "ror_mcp/toolset"
 require_relative "ror_mcp/schema"
 require_relative "ror_mcp/pipeline/errors"
+require_relative "ror_mcp/pipeline/catalog"
 require_relative "ror_mcp/pipeline/fields"
 require_relative "ror_mcp/pipeline/lookups"
 require_relative "ror_mcp/pipeline/match"
@@ -21,6 +23,7 @@ require_relative "ror_mcp/renderers/json"
 require_relative "ror_mcp/renderers/csv"
 require_relative "ror_mcp/tools/query_tool_text"
 require_relative "ror_mcp/tools/query_tool"
+require_relative "ror_mcp/envelope"
 require_relative "ror_mcp/executor"
 require_relative "ror_mcp/server"
 require_relative "ror_mcp/endpoint"
@@ -41,6 +44,12 @@ module RorMcp
     def configuration
       @configuration ||= Configuration.new
     end
+
+    def logger
+      @logger ||= defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger ? Rails.logger : Logger.new($stderr)
+    end
+
+    attr_writer :logger
 
     # The request being served, for toolsets (django-mcp-server puts it in a contextvar).
     def current_request

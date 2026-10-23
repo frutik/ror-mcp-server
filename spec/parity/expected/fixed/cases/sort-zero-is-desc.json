@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "quirk: any direction other than 1 sorts descending",
+    "id": "sort-zero-is-desc",
+    "pipeline": [
+      {
+        "$sort": {
+          "price": 0
+        }
+      },
+      {
+        "$project": {
+          "price": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 41,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $sort direction for 'price' must be 1 (ascending) or -1 (descending), got 0",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

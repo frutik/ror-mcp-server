@@ -26,6 +26,7 @@ module RorMcp
       @authenticator = configuration.authenticator_for(server_config)
       @sessions = SessionStore.build(configuration.session_store) unless @stateless
       @instructions_tool = configuration.instructions_tool
+      @configuration = configuration
       @tools = []
       @mutex = Mutex.new
     end
@@ -47,7 +48,12 @@ module RorMcp
       list = @instructions_tool ? [instructions_tool, *@tools] : @tools.dup
       list.concat(RorMcp.registry.toolset_tools_for(@key))
       collections = RorMcp.registry.collections_for(@key)
-      list << Tools::QueryTool.build(collections) unless collections.empty?
+      unless collections.empty?
+        query_tool = Tools::QueryTool.build(collections, server: @key)
+        check_description_budget(query_tool.description_value)
+        warn_parity_fields(collections)
+        list << query_tool
+      end
       list
     end
 
@@ -77,6 +83,29 @@ module RorMcp
     end
 
     private
+
+    # Clients truncate long tool descriptions and silently lose collections (PLAN §3).
+    def check_description_budget(description)
+      budget = @configuration.description_budget
+      return if budget.nil? || description.length <= budget
+
+      message = "MCP server #{@key.inspect}: the query_data_collections description is #{description.length} characters, " \
+                "over the description_budget of #{budget}. Narrow `fields` or move collections to another server."
+      raise ConfigurationError, message if @configuration.description_budget_mode == :raise
+
+      RorMcp.logger.warn(message)
+    end
+
+    # Under :parity, `fields` only shapes the schema; queries without $project still return every column.
+    def warn_parity_fields(collections)
+      return unless @configuration.pipeline_semantics == :parity
+
+      narrowed = collections.values.reject { |c| c.fields == :all }.map(&:name)
+      return if narrowed.empty?
+
+      RorMcp.logger.warn("MCP server #{@key.inspect} uses :parity semantics: #{narrowed.join(', ')} limit `fields`, " \
+                         "but a pipeline without $project still returns every column (as in django-mcp-server).")
+    end
 
     def build_mcp_server
       MCP::Server.new(

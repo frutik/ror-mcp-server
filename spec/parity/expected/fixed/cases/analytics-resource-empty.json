@@ -1,0 +1,28 @@
+{
+  "case": {
+    "collection": "vipcustomer",
+    "covers": "output_as_resource with no rows → 'No results found'",
+    "id": "analytics-resource-empty",
+    "pipeline": [
+      {
+        "$match": {
+          "name": "nobody"
+        }
+      }
+    ],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 7,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "No results found",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

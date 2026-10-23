@@ -1,0 +1,44 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$in",
+    "id": "match-in",
+    "pipeline": [
+      {
+        "$match": {
+          "status": {
+            "$in": [
+              "paid",
+              "shipped"
+            ]
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "status": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 11,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1002\",\"status\":\"shipped\"},{\"number\":\"ORD-1003\",\"status\":\"paid\"},{\"number\":\"ORD-1006\",\"status\":\"shipped\"},{\"number\":\"ORD-1007\",\"status\":\"paid\"},{\"number\":\"ORD-1010\",\"status\":\"shipped\"},{\"number\":\"ORD-1011\",\"status\":\"paid\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

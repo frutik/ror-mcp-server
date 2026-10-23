@@ -1,0 +1,24 @@
+{
+  "case": {
+    "arguments": {
+      "reason": "boom"
+    },
+    "covers": "exception → isError",
+    "id": "tool-error",
+    "server": "default",
+    "tool": "explode"
+  },
+  "response": {
+    "id": 96,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool explode: exploded: boom",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

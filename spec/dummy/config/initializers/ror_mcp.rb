@@ -1,7 +1,8 @@
 # Mirrors spec/parity/django_app/refproject/settings.py + urls.py.
 
 RorMcp.configure do |c|
-  c.pipeline_semantics = :parity
+  # :parity is checked against spec/parity/expected/django, :fixed against expected/fixed.
+  c.pipeline_semantics = ENV.fetch("RORMCP_SEMANTICS", "parity").to_sym
 
   c.default_server name: "parity-shop",
                    instructions: "Reference shop server for ror-mcp-server parity tests. " \

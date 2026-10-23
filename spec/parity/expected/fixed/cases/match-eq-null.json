@@ -1,0 +1,38 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$eq null → isnull",
+    "id": "match-eq-null",
+    "pipeline": [
+      {
+        "$match": {
+          "billing_identity": {
+            "$eq": null
+          }
+        }
+      },
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 5,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":11}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

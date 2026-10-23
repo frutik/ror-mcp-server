@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "`from` not published → error",
+    "id": "lookup-from-unpublished",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "user",
+          "localField": "customer"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 69,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $lookup from 'user': no such collection on this server. Collections: category, customer, lineitem, order, product",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

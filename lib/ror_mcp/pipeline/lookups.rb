@@ -7,11 +7,14 @@ module RorMcp
     # later "alias.field" references become "prefix__field" paths, and the join
     # happens when a path is used. All $lookup stages are read first, wherever
     # they sit in the pipeline (PLAN §1A.6).
+    #
+    # Under `:fixed` semantics (PLAN §1B) `from` must name the collection the
+    # reference points at, localField resolves by reflection (no "_id"
+    # mangling), and the alias joins that collection: its fields and scope apply.
     class Lookups
-      def initialize(fields, published_models)
+      def initialize(fields)
         @fields = fields
-        # Django compares `from` with model names (lowercase class names), not collection names.
-        @allowed = published_models.map { |model| model.name.demodulize.downcase }
+        @catalog = fields.catalog
         @aliases = {}
       end
 
@@ -21,7 +24,10 @@ module RorMcp
         from, local, foreign, as = %w[from localField foreignField as].map do |key|
           lookup.fetch(key) { raise QueryError, "$lookup is missing '#{key}'" }
         end
-        unless @allowed.include?(from.to_s.downcase)
+        return register_fixed(from.to_s, local.to_s, foreign.to_s, as.to_s) if @catalog.fixed?
+
+        # Django compares `from` with model names (lowercase class names), not collection names.
+        unless @catalog.model_names.include?(from.to_s.downcase)
           raise QueryError, "Invalid lookup from collection '#{from}'  : please reveiw schemas."
         end
 
@@ -45,6 +51,48 @@ module RorMcp
       end
 
       private
+
+      def register_fixed(from, local, foreign, as)
+        target = @catalog.by_name(from)
+        unless target
+          raise QueryError, "$lookup from '#{from}': no such collection on this server. Collections: #{@catalog.names.join(', ')}"
+        end
+
+        path, field = reference_path(local, translate(local))
+        @fields.resolve(path) # checks that every step is published, and joins the way there
+        expected = @catalog.reference_target(@catalog.base, field) if path == field.name
+        klass = field.reflection.klass
+        unless target.model <= klass || klass <= target.model
+          hint = expected ? " Use \"from\": \"#{expected.collection_name}\"." : ""
+          raise QueryError, "$lookup localField '#{local}' points at #{klass.name.demodulize}, not at the '#{from}' collection.#{hint}"
+        end
+        target_key = @fields.primary_key(klass).attname
+        unless [target_key, "_id", "pk"].include?(foreign)
+          raise QueryError, "$lookup foreignField must be \"_id\" (the primary key of '#{from}'), got '#{foreign}'"
+        end
+        if @aliases.key?(as)
+          raise QueryError, "$lookup alias '#{as}' is used twice; give each $lookup its own \"as\""
+        end
+
+        @fields.bind(path, target)
+        @aliases[as] = path
+      end
+
+      # "customer_id" or "customer" (or "o.customer" through an alias) → ["customer", field].
+      def reference_path(local, translated)
+        model = @fields.model
+        names = translated.split("__").map do |part|
+          field = @fields.find(model, part)
+          raise QueryError, "$lookup localField '#{local}': '#{part}' is not a field of #{model.name.demodulize}" unless field
+          unless field.reference?
+            raise QueryError, "$lookup localField '#{local}' is not a reference (belongs_to); references can be joined, '#{part}' is a #{field.column.type}"
+          end
+
+          model = field.reflection.klass
+          [field.name, field]
+        end
+        [names.map(&:first).join("__"), names.last.last]
+      end
 
       # django-mcp-server's _validate_lookup: localField must be a many-to-one
       # field of the model it reaches, foreignField that model's key.

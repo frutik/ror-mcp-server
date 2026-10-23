@@ -113,6 +113,40 @@ module RorMcp
         setting(:computed) || {}
       end
 
+      # Upper bound on $limit for this collection (`:fixed` semantics); default: config.max_limit.
+      def max_limit(value = nil)
+        value.nil? ? setting(:max_limit) : (@max_limit = Integer(value))
+      end
+
+      # Where a belongs_to points when reflection can't tell (STI, custom class_name):
+      # `reference :author, to: "user"` names the target collection (`:fixed` semantics).
+      def reference(field, to:)
+        @references = references.merge(field.to_s => to.to_s)
+      end
+
+      def references
+        setting(:references) || {}
+      end
+
+      # Run this collection's queries under connected_to(role:, shard:).
+      def connects_to(role: nil, shard: nil)
+        @connection = { role: role, shard: shard }.compact
+      end
+
+      def connection_options
+        setting(:connection) || {}
+      end
+
+      # A pseudo-field that picks the database shard: required as an equality in
+      # $match, mapped by `to` to connected_to options, refused everywhere else.
+      #   routing_field :region, to: ->(value) { { shard: value.to_sym } }
+      def routing_field(name = nil, to: nil, doc: nil)
+        return setting(:routing_field) if name.nil?
+        raise ConfigurationError, "routing_field #{name} needs `to:` (value → connected_to options)" unless to.respond_to?(:call)
+
+        @routing_field = RoutingField.new(name: name.to_s, to: to, doc: doc)
+      end
+
       def output_format(format = nil)
         format.nil? ? (setting(:output_format) || :json) : (@output_format = format.to_sym)
       end
@@ -183,6 +217,8 @@ module RorMcp
         superclass.send(:setting, name) if superclass < Collection
       end
     end
+
+    RoutingField = Struct.new(:name, :to, :doc, keyword_init: true)
 
     attr_reader :context
 

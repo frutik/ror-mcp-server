@@ -2,35 +2,42 @@
 
 module RorMcp
   module Pipeline
-    # Runs a search pipeline against a relation and returns rows as hashes,
-    # reproducing django-mcp-server's apply_json_mango_query (`:parity`
-    # semantics, PLAN §1A.6):
+    # Runs a search pipeline against a relation and returns rows as hashes.
     #
+    # `:parity` reproduces django-mcp-server's apply_json_mango_query (PLAN §1A.6):
     # - $limit slices at once; later $match/$sort then fail, as on a sliced QuerySet.
     # - $skip is remembered and applied last, after any $limit ($limit 3, $skip 2 → 1 row).
-    # - $sort: direction 1 is ascending, anything else descending; a later $sort replaces it.
+    # - $sort: direction 1 is ascending, anything else descending; field names untranslated.
     # - $project: truthy values include, "$path" strings map, 0/false are ignored,
     #   dotted output keys nest. Without $project every column comes back.
-    # - $text (top level of a $match) / $search: every word must match one search
-    #   field, case-insensitively (Django's icontains).
-    # - $group (last stage): _id null → one row; "$f" → key under the field's
-    #   name; {k: "$f"} → keys under "_id". $sum/$count of 1 is COUNT(*), a
-    #   documented deviation (PLAN §1B): Django's Count("id") fails without an id column.
+    #
+    # `:fixed` corrects those (PLAN §1B): stages apply in order (a $match after
+    # $limit filters the limited rows), $sort takes only 1/-1 and lookup aliases,
+    # $project supports exclusion, rows without $project carry only `fields` +
+    # computed fields, and default_limit / max_limit apply.
+    #
+    # Both: $text / $search need every word to match one search field;
+    # $group (last stage) gives one row for _id null, the key under the field's
+    # name for "$f", keys under "_id" for an object. $sum/$count of 1 is
+    # COUNT(*), a documented deviation from Django's Count("id") (PLAN §1B).
     class Compiler
       # Checked in this order, like the if/elif chain in django-mcp-server.
       STAGES = %w[$match $search $sort $skip $limit $project $group $lookup].freeze
 
-      # `collections`: the collections published on the same server (`$lookup.from`
-      # targets, and the computed fields of joined models).
-      def initialize(collection, relation, collections: { collection.collection_name => collection })
+      # `collections`: the collections published on the same server.
+      def initialize(collection, relation, collections: { collection.collection_name => collection },
+                     semantics: RorMcp.configuration.pipeline_semantics, context: nil)
         @collection = collection
         @model = collection.model
         @relation = relation
-        @fields = Fields.new(@model, computed: computed_lookup(collections.values))
-        @lookups = Lookups.new(@fields, collections.values.map(&:model))
+        @catalog = Catalog.new(collection, collections, semantics: semantics, context: context)
+        @fields = Fields.new(@catalog, pseudo: routing_messages)
+        @lookups = Lookups.new(@fields)
         @match = Match.new(@fields, translate: @lookups.method(:translate), extra_filters: collection.extra_filters)
-        @high = nil
-        @skip = nil
+        @high = nil   # :parity slice end ([:high])
+        @skip = nil   # :parity [skip:] applied last
+        @offset = 0   # :fixed window, built in order
+        @limit = nil
         @projection = nil
       end
 
@@ -46,7 +53,7 @@ module RorMcp
           when "$match" then apply_match(stage["$match"])
           when "$search" then apply_search(stage["$search"])
           when "$sort" then apply_sort(stage["$sort"])
-          when "$skip" then @skip = non_negative(stage["$skip"], "$skip")
+          when "$skip" then apply_skip(stage["$skip"])
           when "$limit" then apply_limit(stage["$limit"])
           when "$project" then apply_project(stage["$project"], pipeline[(index + 1)..])
           when "$group"
@@ -65,9 +72,14 @@ module RorMcp
 
       private
 
-      def apply_match(condition)
-        raise QueryError, "Cannot filter a query once a slice has been taken." if sliced?
+      def fixed?
+        @catalog.fixed?
+      end
 
+      # --- filtering ------------------------------------------------------------
+
+      def apply_match(condition)
+        before_filter
         node =
           if condition.is_a?(Hash) && condition.key?("$text")
             fields = search_fields
@@ -85,8 +97,7 @@ module RorMcp
       end
 
       def apply_search(spec)
-        raise QueryError, "Cannot filter a query once a slice has been taken." if sliced?
-
+        before_filter
         fields = search_fields
         raise QueryError, "$search used but full text search is not supported for thsi collection." if fields.empty?
 
@@ -99,6 +110,15 @@ module RorMcp
 
         node = text_search(text["query"].to_s, paths)
         @relation = @relation.where(node) if node
+      end
+
+      # :parity: a sliced QuerySet can't be filtered. :fixed: filter the window's rows.
+      def before_filter
+        if fixed?
+          materialize!
+        elsif sliced?
+          raise QueryError, "Cannot filter a query once a slice has been taken."
+        end
       end
 
       # Each word must match at least one field (OR); all words must match (AND).
@@ -122,28 +142,92 @@ module RorMcp
         Arel::Nodes::Grouping.new(connector == :and ? Arel::Nodes::And.new(nodes) : nodes.reduce { |a, b| a.or(b) })
       end
 
+      # --- ordering and pagination ----------------------------------------------
+
       def apply_sort(spec)
-        raise QueryError, "Cannot reorder a query once a slice has been taken." if sliced?
         raise QueryError, "$sort must be an object of field: direction" unless spec.is_a?(Hash)
 
-        # Django's order_by takes field names as given: no "_id" or alias translation.
+        if fixed?
+          materialize!
+        elsif sliced?
+          raise QueryError, "Cannot reorder a query once a slice has been taken."
+        end
+
         orders = spec.map do |field, direction|
-          attribute = @fields.attribute(field)
-          [1, true].include?(direction) ? attribute.asc : attribute.desc
+          if fixed?
+            unless [1, -1].include?(direction)
+              raise QueryError, "$sort direction for '#{field}' must be 1 (ascending) or -1 (descending), got #{direction.inspect}"
+            end
+
+            attribute = @fields.attribute(@lookups.translate(field))
+            direction == 1 ? attribute.asc : attribute.desc
+          else
+            # Django's order_by takes field names as given: no "_id" or alias translation.
+            attribute = @fields.attribute(field)
+            [1, true].include?(direction) ? attribute.asc : attribute.desc
+          end
         end
         @relation = @relation.reorder(*orders)
       end
 
+      def apply_skip(value)
+        value = non_negative(value, "$skip")
+        return @skip = value unless fixed?
+
+        @offset += value
+        @limit = [@limit - value, 0].max if @limit
+      end
+
       def apply_limit(value)
         value = non_negative(value, "$limit")
-        @high = @high ? [@high, value].min : value
+        if fixed?
+          value = [value, max_limit].min if max_limit
+          @limit = @limit ? [@limit, value].min : value
+        else
+          @high = @high ? [@high, value].min : value
+        end
       end
+
+      def max_limit
+        @collection.max_limit || RorMcp.configuration.max_limit
+      end
+
+      def sliced?
+        !@high.nil?
+      end
+
+      def windowed?
+        @offset.positive? || !@limit.nil?
+      end
+
+      # :fixed: the rows so far become a subquery under the table's own name, so
+      # the next stage works on exactly the window (MongoDB order of stages).
+      def materialize!
+        return unless windowed?
+
+        inner = @relation.except(:select).select(@model.arel_table[Arel.star])
+        inner = inner.joins(*@fields.joins) unless @fields.joins.empty?
+        inner = inner.offset(@offset) if @offset.positive?
+        inner = inner.limit(@limit) if @limit
+        # Orderings on the base table still apply to the subquery's rows.
+        orders = @relation.order_values.select do |order|
+          order.respond_to?(:expr) && order.expr.respond_to?(:relation) && order.expr.relation.name.to_s == @model.table_name
+        end
+        @relation = @model.unscoped.from(inner, @model.table_name).reorder(*orders)
+        @fields.reset_joins
+        @offset = 0
+        @limit = nil
+      end
+
+      # --- projection and rows --------------------------------------------------
 
       def apply_project(spec, later_stages)
         if later_stages.any? { |stage| stage.is_a?(Hash) && stage.key?("$group") }
           raise QueryError, "$project cannot appear when pipeline contains $group : please review pipeline syntax constriants."
         end
         raise QueryError, "$project must be an object" unless spec.is_a?(Hash)
+
+        return @projection = exclusion(spec) if fixed? && exclusion?(spec)
 
         # Output key → internal field name, as Django passes them to values().
         @projection = spec.each_with_object({}) do |(output, value), mapping|
@@ -155,12 +239,37 @@ module RorMcp
         end
       end
 
+      # :fixed: {"f": 0} excludes; mixing 0 and 1 (other than _id) is an error, as in MongoDB.
+      def exclusion?(spec)
+        excluded = spec.reject { |key, value| key.to_s == "_id" || python_truthy?(value) }
+        included = spec.select { |key, value| key.to_s != "_id" && python_truthy?(value) }
+        if excluded.any? && included.any?
+          raise QueryError, "$project cannot mix inclusion and exclusion (except for _id): " \
+                            "list the fields to keep, or only the fields to drop"
+        end
+        excluded.any?
+      end
+
+      def exclusion(spec)
+        dropped = spec.keys.map(&:to_s)
+        default_names.reject { |attname, name| dropped.include?(attname) || dropped.include?(name) }
+                     .to_h { |attname, _| [attname, attname] }
+      end
+
+      # Rows without $project, { output key (attname) → field name }. :parity:
+      # every column (Django's values()) plus computed fields. :fixed: the
+      # published fields plus computed fields.
+      def default_names
+        fields = fixed? ? Schema.fields_of(@collection, [], catalog: @catalog) : @fields.columns
+        fields.to_h { |f| [f.attname, f.name] }.merge(@collection.computed_fields.keys.to_h { |name| [name, name] })
+      end
+
       def fetch
         relation = window(@relation)
         return [] if relation.nil?
 
         if @projection.nil? || @projection.empty?
-          names = @fields.columns.map(&:attname) + @collection.computed_fields.keys
+          names = default_names.keys
           return pluck(relation, names).map { |values| names.zip(values).to_h }
         end
 
@@ -171,8 +280,10 @@ module RorMcp
         end
       end
 
-      # Django slices: [:high] for $limit, then [skip:] at the end.
       def window(relation)
+        return fixed_window(relation) if fixed?
+
+        # Django slices: [:high] for $limit, then [skip:] at the end.
         low = @skip || 0
         if @high
           low = [low, @high].min
@@ -181,6 +292,15 @@ module RorMcp
           relation = relation.limit(@high - low)
         end
         low.positive? ? relation.offset(low) : relation
+      end
+
+      def fixed_window(relation)
+        limit = @limit || RorMcp.configuration.default_limit
+        limit = [limit, max_limit].min if limit && max_limit
+        return nil if limit&.zero?
+
+        relation = relation.offset(@offset) if @offset.positive?
+        limit ? relation.limit(limit) : relation
       end
 
       # Selects the paths under positional aliases and casts each value with the
@@ -210,6 +330,7 @@ module RorMcp
       def group(spec)
         raise QueryError, "$group must be an object" unless spec.is_a?(Hash)
 
+        materialize! if fixed?
         group_id = spec.fetch("_id") { raise QueryError, "$group requires an _id" }
         aggregates = spec.except("_id").map { |key, aggregate| [key.to_s, aggregate(key, aggregate)] }
 
@@ -278,7 +399,7 @@ module RorMcp
       def run_group(paths, aggregates)
         relation = @relation
         if @high
-          # Aggregating a sliced queryset: Django wraps it in a subquery. $skip is ignored, as in Django.
+          # :parity: aggregating a sliced queryset — Django wraps it in a subquery; $skip is ignored.
           key = @model.arel_table[@model.primary_key]
           inner = @relation.except(:select).select(key).limit(@high)
           inner = inner.joins(*@fields.joins) unless @fields.joins.empty?
@@ -318,19 +439,19 @@ module RorMcp
         reference.type.deserialize(value)
       end
 
-      def computed_lookup(collections)
-        by_model = collections.each_with_object({}) { |c, map| map[c.model] ||= c.computed_fields }
-        by_model[@model] = @collection.computed_fields
-        ->(model) { by_model.fetch(model, {}) }
+      # --- helpers --------------------------------------------------------------
+
+      def routing_messages
+        routing = @collection.routing_field
+        return {} unless routing
+
+        { routing.name => "'#{routing.name}' is a routing field: it selects the database and can only be used " \
+                          "as an equality at the top level of a $match (e.g. {\"#{routing.name}\": \"<value>\"})" }
       end
 
       def assign(target, path, value)
         path[0..-2].each { |part| target = (target[part] ||= {}) }
         target[path.last] = value
-      end
-
-      def sliced?
-        !@high.nil?
       end
 
       def non_negative(value, stage)

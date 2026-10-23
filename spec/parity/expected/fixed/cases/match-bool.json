@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "boolean literal",
+    "id": "match-bool",
+    "pipeline": [
+      {
+        "$match": {
+          "in_stock": false
+        }
+      },
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$project": {
+          "in_stock": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 21,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"KIT-003\",\"in_stock\":false},{\"sku\":\"LAP-003\",\"in_stock\":false}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

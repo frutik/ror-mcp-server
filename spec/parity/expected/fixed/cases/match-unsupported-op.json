@@ -1,0 +1,30 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "unknown operator → error",
+    "id": "match-unsupported-op",
+    "pipeline": [
+      {
+        "$match": {
+          "status": {
+            "$foo": "paid"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 22,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Unsupported operator $foo : please reveiwe pipeline syntax constraints ",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

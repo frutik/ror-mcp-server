@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "multi-key sort",
+    "id": "sort-multi",
+    "pipeline": [
+      {
+        "$sort": {
+          "status": 1,
+          "total": -1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "status": 1,
+          "total": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 42,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1005\",\"status\":\"cancelled\",\"total\":4883.0},{\"number\":\"ORD-1009\",\"status\":\"cancelled\",\"total\":2366.7},{\"number\":\"ORD-1013\",\"status\":\"cancelled\",\"total\":1517.8},{\"number\":\"ORD-1001\",\"status\":\"cancelled\",\"total\":499.9},{\"number\":\"ORD-1003\",\"status\":\"paid\",\"total\":6549.0},{\"number\":\"ORD-1011\",\"status\":\"paid\",\"total\":4556.98},{\"number\":\"ORD-1007\",\"status\":\"paid\",\"total\":699.0},{\"number\":\"ORD-1004\",\"status\":\"pending\",\"total\":2866.6},{\"number\":\"ORD-1012\",\"status\":\"pending\",\"total\":2676.88},{\"number\":\"ORD-1014\",\"status\":\"pending\",\"total\":1398.0},{\"number\":\"ORD-1008\",\"status\":\"pending\",\"total\":1287.0},{\"number\":\"ORD-1006\",\"status\":\"shipped\",\"total\":3187.84},{\"number\":\"ORD-1002\",\"status\":\"shipped\",\"total\":2386.9},{\"number\":\"ORD-1010\",\"status\":\"shipped\",\"total\":699.0}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

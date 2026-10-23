@@ -19,20 +19,22 @@ module RorMcp
 
       module_function
 
-      def build(collections)
+      def build(collections, server: nil)
         collections.each_value(&:validate_columns!)
         MCP::Tool.define(name: NAME, description: description(collections), input_schema: INPUT_SCHEMA) do |collection:, search_pipeline: [], server_context: nil|
           context = server_context.respond_to?(:auth_info) ? server_context.auth_info : nil
           # Arguments may arrive with symbol keys; the compiler works on JSON as sent.
           pipeline = JSON.parse(JSON.generate(search_pipeline))
-          Executor.new(collections, context: context).call(collection, pipeline)
+          Executor.new(collections, context: context, server: server).call(collection, pipeline)
         end
       end
 
       def description(collections)
         published = collections.values.map(&:model)
+        semantics = RorMcp.configuration.pipeline_semantics
         collections.each_with_object(QueryToolText::PREAMBLE.dup) do |(name, collection), text|
-          schema = PythonRepr.dump(Schema.json_schema(collection, published))
+          catalog = Pipeline::Catalog.new(collection, collections, semantics: semantics)
+          schema = PythonRepr.dump(Schema.json_schema(collection, published, catalog: catalog))
           text << "\n### '#{name}' collection\nDocuments conform the following JSON Schema\n```json\n#{schema}\n```\n\n"
 
           search = Schema.text_search_fields(collection)

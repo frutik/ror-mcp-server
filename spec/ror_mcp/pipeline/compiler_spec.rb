@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # django-mcp-server semantics (`:parity`, PLAN §1A.6–7) on a real database.
+# `:fixed` semantics: fixed_semantics_spec.rb.
 RSpec.describe RorMcp::Pipeline::Compiler do
   before { ShopDb.setup! }
 
@@ -26,7 +27,7 @@ RSpec.describe RorMcp::Pipeline::Compiler do
   # Every collection defined in the example is "published on the server".
   def rows(pipeline, collection = orders, relation: collection.model.all)
     collections = RorMcp.registry.published.to_h { |c| [c.name, c] }
-    described_class.new(collection, relation, collections: collections).rows(JSON.parse(JSON.generate(pipeline)))
+    described_class.new(collection, relation, collections: collections, semantics: :parity).rows(JSON.parse(JSON.generate(pipeline)))
   end
 
   def ids(pipeline, collection = orders, **options)
@@ -268,7 +269,7 @@ RSpec.describe RorMcp::Pipeline::Compiler do
     it "is reachable through $lookup, with {table} bound to the join alias" do
       with_computed
       collections = { "order" => orders, "customer" => with_computed }
-      result = described_class.new(orders, ShopDb::Order.all, collections: collections).rows(
+      result = described_class.new(orders, ShopDb::Order.all, collections: collections, semantics: :parity).rows(
         [{ "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "_id", "as" => "c" } },
          { "$match" => { "_id" => 4 } }, { "$project" => { "who" => "$c.name", "their_orders" => "$c.order_count" } }],
       )
@@ -286,7 +287,7 @@ RSpec.describe RorMcp::Pipeline::Compiler do
 
     def lookup_rows(pipeline, collection = orders)
       collections = published.each_with_index.to_h { |model, i| ["c#{i}", Class.new(RorMcp::Collection).tap { |c| c.model(model) }] }
-      described_class.new(collection, collection.model.all, collections: collections)
+      described_class.new(collection, collection.model.all, collections: collections, semantics: :parity)
                      .rows(JSON.parse(JSON.generate(pipeline)))
     end
 

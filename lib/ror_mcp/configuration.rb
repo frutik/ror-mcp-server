@@ -12,8 +12,18 @@ module RorMcp
     # false to disable authentication, or a callable(request) → context | nil.
     ServerConfig = Struct.new(:key, :name, :instructions, :stateless, :authenticate, keyword_init: true)
 
-    attr_reader :servers, :pipeline_semantics
-    attr_accessor :session_store, :instructions_tool
+    DESCRIPTION_BUDGET_MODES = %i[warn raise].freeze
+
+    attr_reader :servers, :pipeline_semantics, :description_budget_mode, :query_subscribers, :tool_subscribers
+    attr_accessor :session_store, :instructions_tool,
+                  # Safety envelope (PLAN §5), both semantics:
+                  :read_role,          # run queries under connected_to(role:), e.g. :reading for a replica
+                  :statement_timeout,  # seconds (Numeric or ActiveSupport::Duration); PostgreSQL and MySQL
+                  # :fixed semantics only:
+                  :default_limit,      # $limit applied when a pipeline has none
+                  :max_limit,          # upper bound on $limit (collections can lower it with max_limit)
+                  # Characters of a server's query_data_collections description; nil = no check.
+                  :description_budget
 
     def initialize
       @servers = {}
@@ -21,7 +31,32 @@ module RorMcp
       @session_store = :memory
       @instructions_tool = true
       @pipeline_semantics = :fixed
+      @read_role = nil
+      @statement_timeout = nil
+      @default_limit = 100
+      @max_limit = 1000
+      @description_budget = nil
+      @description_budget_mode = :warn
+      @query_subscribers = []
+      @tool_subscribers = []
       default_server
+    end
+
+    def description_budget_mode=(mode)
+      mode = mode.to_sym
+      raise ConfigurationError, "description_budget_mode must be :warn or :raise" unless DESCRIPTION_BUDGET_MODES.include?(mode)
+
+      @description_budget_mode = mode
+    end
+
+    # Called with a RorMcp::Instrumentation::Event after every query_data_collections call.
+    def on_query(&block)
+      @query_subscribers << block
+    end
+
+    # Called with a RorMcp::Instrumentation::Event after every toolset tool call.
+    def on_tool(&block)
+      @tool_subscribers << block
     end
 
     # django-mcp-server's DJANGO_MCP_GLOBAL_SERVER_CONFIG.

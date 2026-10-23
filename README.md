@@ -25,11 +25,10 @@ Licensed under the **MIT License**.
 
 > [!IMPORTANT]
 > **Pre-release: most of the API below is the target, not yet the implementation.**
-> Milestones **M1–M5** are done: everything django-mcp-server publishes (servers, auth,
-> sessions, collections, the full query pipeline, custom tools, CSV and embedded-resource
-> output) works, and the Rails test app returns the same answers as the Django reference app.
-> Still to come: the safety envelope and `:fixed` semantics (M6), then generators, rake tasks
-> and the first release (M7). Features are built milestone
+> Milestones **M1–M6** are done: everything django-mcp-server publishes works and matches
+> the Django reference app answer for answer (`:parity`), and the corrected `:fixed`
+> semantics, read-only safety envelope, multi-database support, sharding and
+> instrumentation are in. Still to come (M7): generators, rake tasks, CI and the first release. Features are built milestone
 > by milestone (see [Project status](#project-status)), and each section is marked with the
 > milestone that delivers it. The design lives in
 > [`PLAN.md`](PLAN.md).
@@ -63,7 +62,7 @@ Licensed under the **MIT License**.
 | **M3** | `$lookup`, references, multiple servers | ✅ done: every `$lookup` parity case passes; 88/120 overall |
 | **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | ✅ done: every query parity case passes (106/120; the rest is tools and CSV) |
 | **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | ✅ done: **full parity**, 119/120 + 1 documented deviation |
-| **M6** | Read-only safety envelope, multi-database, sharding, description budget, instrumentation, `:fixed` semantics | planned |
+| **M6** | Read-only safety envelope, multi-database, sharding, description budget, instrumentation, `:fixed` semantics | ✅ done: `:fixed` has its own recorded outputs (120/120); `:parity` still matches Django |
 | **M7** | Generators, rake tasks, first release (0.1.0) | planned |
 
 How "done" is decided: a reference Django app runs django-mcp-server on a small shop
@@ -386,7 +385,8 @@ class Sales::OrderCollection < RorMcp::Collection
            sql: "SELECT count(*) FROM line_items WHERE line_items.order_id = {table}.id",
            doc: "number of line items in the order"
 
-  reference :customer, to: "customer"       # explicit, when reflection can't decide
+  reference :customer, to: "customer"       # :fixed: explicit target collection, when reflection can't decide
+  connects_to role: :reading                # optional: role/shard for this collection's queries
 
   instructions <<~TXT
     One row per order. "status": pending, paid, shipped, cancelled.
@@ -414,7 +414,7 @@ end
 | `extra_filters` | Extra `$match` operators, as in django-mcp-server (`{"name": {"$icontains": "x"}}`). |
 | `computed` | A SQL/Arel expression published as a field. It appears in the schema, can be filtered, sorted and grouped, and is reachable through `$lookup`. |
 | `reference` | Declares where an association points when it can't be inferred (STI, polymorphic, custom `class_name`). |
-| `max_limit` | Upper bound on `$limit` for this collection. |
+| `max_limit` | Upper bound on `$limit` for this collection (`:fixed`). |
 | `instructions` | Extra text appended to the collection's schema in the tool description. |
 | `description` | The schema's top-level description. Default: `Model(field, …)`, like Django's auto docstring. |
 | `describe` | A field's description. Default: the column comment, where the database has comments. |
@@ -583,67 +583,84 @@ computed :line_count, :integer,
 
 ### Safety: read-only queries, timeouts, limits
 
-*(M6)* Every collection query runs inside:
+*(M6, done)* Every collection query, and every tool not declared `writes: true`, runs in
+an envelope that never changes results, only stops unsafe ones:
 
 ```ruby
-connected_to(role: read_role) { while_preventing_writes { transaction {
-  # SET TRANSACTION READ ONLY; SET LOCAL statement_timeout …
+connected_to(role: read_role, shard: …) {        # when configured
+  while_preventing_writes { transaction {        # Rails refuses write statements
+    # PostgreSQL: SET TRANSACTION READ ONLY; SET LOCAL statement_timeout
+    # MySQL:      SET SESSION max_execution_time (restored afterwards)
+    # SQLite:     PRAGMA query_only = ON (restored afterwards)
+    …                                            # rolled back at the end
 } } }
 ```
 
 ```ruby
 c.read_role         = :reading        # route queries to a replica
-c.statement_timeout = 15.seconds
-c.default_limit     = 100             # applied when the pipeline has no $limit
+c.statement_timeout = 15.seconds      # PostgreSQL, MySQL
+c.default_limit     = 100             # :fixed only: applied when a pipeline has no $limit
+c.max_limit         = 1000            # :fixed only: $limit is clamped to this (per collection: max_limit)
 ```
 
-For defence in depth, also give the MCP database role read-only grants.
+A tool that writes must say so (`tool :flag_order, writes: true`); without it, a write
+fails with an `isError` result. For defence in depth, also give the MCP database role
+read-only grants: the guards above inspect statements, a database role can't be talked
+out of its grants.
 
 ### Multiple databases and sharding
 
-*(M6)*
+*(M6, done)* A collection runs on its model's database. Pin a role or shard with
+`connects_to`, or let the client pick the shard with a routing field:
 
 ```ruby
 class Billing::InvoiceCollection < RorMcp::Collection
-  model Invoice
-  connects_to :billing                # a collection in another database
+  model Invoice                         # Invoice < BillingRecord, which connects_to its database
+  connects_to role: :reading            # optional: role and/or shard for this collection's queries
   fields :all
 end
 
 class Analytics::EventCollection < RorMcp::Collection
   model Event
-  fields :id, :name, :region, :occurred_at
-  routing_field :region, to: ->(value) { { shard: value.to_sym } }
+  fields :id, :name, :occurred_at
+  routing_field :region, to: ->(value) { %w[eu us].include?(value) ? { shard: value.to_sym } : nil }
 end
 ```
 
-A `$lookup` across databases is rejected at boot. A routing field must appear in `$match`
-(`{"region": "eu"}`), and the query then runs under `connected_to(shard: :eu)`. Using it in
-`$sort`, `$project`, `$group` or `$lookup` is rejected with an error that explains why.
+- References into another database are left out of the schema, and a `$lookup` across
+  databases is refused with an error naming both databases.
+- A routing field is a pseudo-field: it's published in the schema and required as an
+  equality in `$match` (`{"region": "eu"}` or `{"region": {"$eq": "eu"}}`). The query then
+  runs under `connected_to(shard: :eu)`. `to` returning `nil` means "no such shard".
+  Using the field in `$sort`, `$project`, `$group` or `$lookup` is refused with an error
+  that explains why.
 
 ### Description size
 
-*(M6)* The `query_data_collections` description contains every collection's schema. If it
+*(M6, done)* The `query_data_collections` description contains every collection's schema. If it
 grows too long, some clients truncate it and silently lose collections, while the server
 still connects as if nothing were wrong.
 
 ```ruby
-c.description_budget = 25_000   # characters; warns or raises at boot when exceeded
+c.description_budget      = 25_000   # characters per server; nil (default) = no check
+c.description_budget_mode = :raise   # default :warn (logs through Rails.logger)
 ```
 
-`bin/rails ror_mcp:describe` prints each server's description size.
+The check runs when a server builds its tools, on its first request.
+`bin/rails ror_mcp:describe` *(M7)* will print each server's description size.
 
 ### Instrumentation
 
-*(M6)* `ActiveSupport::Notifications` events:
+*(M6, done)* `ActiveSupport::Notifications` events, and callbacks on the configuration:
 
 | Event | Payload |
 |---|---|
-| `query.ror_mcp` | server, collection, pipeline, rows, duration, error |
-| `tool.ror_mcp` | server, tool, duration, error |
+| `query.ror_mcp` | server, collection, pipeline, rows (count), error |
+| `tool.ror_mcp` | server, tool, error |
 
 ```ruby
-c.on_query { |event| Rails.logger.info(event.to_h.to_json) }
+c.on_query { |event| Rails.logger.info(event.to_h.to_json) }   # event: name, server, collection, pipeline, rows, duration_ms, error
+c.on_tool  { |event| StatsD.timing("mcp.tool.#{event.tool}", event.duration_ms) }
 ```
 
 ### Generators and rake tasks

@@ -1,0 +1,25 @@
+{
+  "case": {
+    "arguments": {
+      "a": 2,
+      "b": 5
+    },
+    "covers": "custom tool returning an int",
+    "id": "tool-add",
+    "server": "default",
+    "tool": "add"
+  },
+  "response": {
+    "id": 93,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "7",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
