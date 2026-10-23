@@ -274,7 +274,7 @@ def _compare_text(where, e, a, semantic):
     return [f"{where} differs\n{_diff(e, a)}"]
 
 
-def check(servers, exp_dir, semantic, only=None):
+def check(servers, exp_dir, semantic, only=None, http_only=False):
     failures = 0
 
     def report(label, problems):
@@ -293,6 +293,10 @@ def check(servers, exp_dir, semantic, only=None):
         for key, e in exp_http.items():
             a = act_http.get(key, {})
             report(f"http {key}", [f"{k}: expected {e[k]!r}, got {a.get(k)!r}" for k in e if a.get(k) != e[k]])
+
+    if http_only:
+        print(f"\n{len(exp_http) - failures}/{len(exp_http)} passed")
+        return 1 if failures else 0
 
     tools, cases = collect(servers, only)
     if not only:
@@ -320,6 +324,7 @@ def main():
     ap.add_argument("--expected", type=Path, default=EXPECTED, help="golden directory (record writes here)")
     ap.add_argument("--semantic", action="store_true", help="accept JSON text that differs only in bytes")
     ap.add_argument("--only", help="comma-separated case ids")
+    ap.add_argument("--http-only", action="store_true", help="check only the HTTP/session scenarios (milestone M1)")
     args = ap.parse_args()
 
     base = args.base_url.rstrip("/")
@@ -331,7 +336,7 @@ def main():
     if args.mode == "record":
         record(servers, args.expected, only)
         return 0
-    return check(servers, args.expected, args.semantic, only)
+    return check(servers, args.expected, args.semantic, only, args.http_only)
 
 
 if __name__ == "__main__":

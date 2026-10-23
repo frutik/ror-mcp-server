@@ -6,7 +6,7 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Same paths as the Django reference app (spec/parity/django_app/refproject/urls.py).
-  if defined?(RorMcp)
+  if defined?(RorMcp::Collection)
     mount RorMcp.endpoint(:default), at: "/mcp"
     mount RorMcp.endpoint(:analytics), at: "/mcp/analytics"
   end

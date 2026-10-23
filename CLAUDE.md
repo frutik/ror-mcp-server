@@ -4,11 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-M0 in progress: the gem itself (gemspec, `lib/`) doesn't exist yet. What does exist is the parity harness, which defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
+M0 nearly done (CI matrix open). The gem is a skeleton: the gemspec and `lib/ror_mcp.rb` load, but no components exist yet. The transport design for M1 comes from `spike/transport/` (throwaway code; findings in its README). The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
 
 ## Commands
 
 ```sh
+# Gem (repo root); Ruby >= 3.2 on PATH, gems install into vendor/bundle
+bundle install
+bundle exec rspec                                        # all specs (spec/dummy and spec/parity are excluded)
+bundle exec rspec spec/spike/transport_spike_spec.rb:42  # one example
+bundle exec rackup spike/transport/config.ru -p 3766 -o 127.0.0.1   # serve the transport spike
+
 # Python side (reference app + clients); .venv is git-ignored
 python -m venv .venv && .venv/bin/pip install -r spec/parity/requirements.txt
 spec/parity/bin/django-server            # reset DB from fixture, serve reference app on :8765
@@ -20,11 +26,12 @@ PATH=/opt/homebrew/opt/ruby/bin:$PATH spec/parity/bin/rails-server   # reset DB,
 .venv/bin/python spec/parity/client/compare_dbs.py                                       # both DBs identical
 .venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765  # Rails vs golden
 .venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765 --only group-null,lookup-basic
+.venv/bin/python spec/parity/client/mcp_parity.py check --http-only --base-url http://127.0.0.1:3766  # HTTP/session rules only (M1 gate)
 .venv/bin/python spec/parity/client/sdk_smoke.py --base-url http://127.0.0.1:3765         # official MCP SDK client
 .venv/bin/python spec/parity/client/mcp_parity.py record   # re-record golden from :8765, then review the diff
 ```
 
-`spec/dummy` installs gems into `vendor/bundle` (the Homebrew gem dir isn't writable from the sandbox).
+Both the repo root and `spec/dummy` install gems into `vendor/bundle` (the Homebrew gem dir isn't writable from the sandbox). `spec/dummy` loads the gem via `path: "../.."`. Its `app/mcp`, initializer and routes stay dormant until `RorMcp::Collection` is defined (M2).
 
 **`PLAN.md` is the source of truth.** Read the relevant section before implementing anything; when a decision changes, update `PLAN.md` along with the code.
 
@@ -52,7 +59,7 @@ Key pieces and how they relate:
 ## Parity harness (PLAN §7, `spec/parity/README.md`)
 
 - The reference app is the spec. `spec/parity/django_app/shop/mcp.py` and `spec/dummy/app/mcp/**` (+ `config/initializers/ror_mcp.rb`) are mirrors: change both together, keep table/column names identical, and re-record the golden files.
-- `spec/dummy/app/mcp` uses the planned `RorMcp` DSL and is dormant (autoload-ignored, routes not mounted) until `RorMcp` is defined. Wiring the gem in means uncommenting the `ror-mcp-server` line in `spec/dummy/Gemfile`.
+- `spec/dummy/app/mcp` uses the planned `RorMcp` DSL and is dormant (autoload-ignored, routes not mounted) until `RorMcp::Collection` exists. When building M1/M2 components, make the dummy app's code real instead of changing it to fit.
 - `expected/django/` is generated output. Never hand-edit it; re-record from a fresh `bin/django-server`. Recordings depend on `PYTHONHASHSEED=0`.
 - Collection names follow Django (`lineitem`, `vipcustomer`), so the Rails mirror pins them with `collection_name`.
 - Quirks the port must reproduce beyond the source reading are listed in PLAN §1A.7.

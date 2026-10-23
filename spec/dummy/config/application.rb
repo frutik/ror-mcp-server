@@ -43,6 +43,6 @@ module Dummy
 
     # app/mcp is written against the planned RorMcp DSL; keep it out of
     # autoloading until the gem is in the bundle (see config/initializers/ror_mcp.rb).
-    Rails.autoloaders.main.ignore(Rails.root.join("app/mcp")) unless defined?(RorMcp)
+    Rails.autoloaders.main.ignore(Rails.root.join("app/mcp")) unless defined?(RorMcp::Collection)
   end
 end

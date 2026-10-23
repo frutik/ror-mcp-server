@@ -419,6 +419,8 @@ connected_to(role: read_role) { while_preventing_writes { transaction {
 ```
 ror-mcp-server/
   lib/ror_mcp.rb
+  lib/ror_mcp_server.rb      # require "ror_mcp_server"
+  lib/ror-mcp-server.rb      # what Bundler.require loads for gem "ror-mcp-server"
   lib/ror_mcp/
     version.rb
     configuration.rb
@@ -437,6 +439,7 @@ ror-mcp-server/
     instrumentation.rb      # ActiveSupport::Notifications "query.ror_mcp", "tool.ror_mcp"
   lib/generators/ror_mcp/{install,collection,toolset}/
   lib/tasks/ror_mcp.rake    # describe, check
+  spike/transport/         # M0 transport spike (throwaway; findings in its README)
   django-mcp-server/        # git submodule: the library being ported (reference source)
   spec/
     dummy/                  # Rails app under test: same schema/data as the reference app;
@@ -500,7 +503,7 @@ resolve, budget).
 
 | # | Deliverable | Done when |
 |---|---|---|
-| M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed. **Done:** reference app, golden recordings, parity client, Rails dummy app with matching schema/data. **Open:** gemspec, CI, transport spike |
+| M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed. **Done:** reference app, golden recordings, parity client, Rails dummy app with matching schema/data; gemspec (loads in the dummy app); transport spike passes 11/11 HTTP parity scenarios (`spike/transport/README.md`). **Open:** CI matrix |
 | M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools |
 | M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass |
 | M3 | `$lookup`, references, thin join targets, multiple servers | §3 rows for name clashes, class-name registry, proxy/STI refs and `_id` mangling green |
@@ -516,8 +519,8 @@ M0–M3 are the MVP: enough to publish real collections from a Rails app.
 
 ## 9. Decisions to make before M0
 
-1. **Name and home**: `ror-mcp-server` / `RorMcp` (or `rails-mcp-server` / `RailsMcp`, which is easier to find on RubyGems). Check name availability. Public OSS or private gem server?
-2. **Base SDK**: official `mcp` gem (recommended; tracks the spec) vs `fast-mcp` (has a Rails integration, but is a separate implementation). The gem only needs the protocol + transport layer, so pick the one with the more stable Streamable HTTP transport at M0.
+1. **Name and home**: ✅ `ror-mcp-server` / `RorMcp` (`rails-mcp-server` is taken on RubyGems). License: MIT, like upstream (`LICENSE` credits django-mcp-server). Still open: public OSS or private gem server.
+2. **Base SDK**: ✅ official `mcp` gem (`~> 1.8`). The transport spike (`spike/transport/README.md`) serves the reference app's whole HTTP/session contract with it.
 3. **Default semantics**: `:fixed` for new apps (recommended) vs `:parity` by default.
 4. **Minimum Rails**: 7.1 (recommended: composite PKs, modern multi-DB) or support 6.1.
 5. **First consumer**: which Rails app adopts it first, and which of its models make up the first server. This keeps the API honest beyond the dummy app.
@@ -536,16 +539,16 @@ Status: ✅ verified · ❓ unverified · ⚠️ verified false (plan already ad
 
 | # | Assumption | How to check | If wrong |
 |---|---|---|---|
-| A1 ❓ **M0** | The official SDK is published as gem `mcp` (modelcontextprotocol/ruby-sdk) and is maintained | `gem info mcp -r`; GitHub activity, release cadence | Fall back to `fast-mcp`, or implement JSON-RPC + Streamable HTTP ourselves (≈ +1 milestone) |
-| A2 ❓ **M0** | It exposes `MCP::Server`, `MCP::Tool`, `MCP::Tool::Response` and a **Streamable HTTP transport** (`MCP::Server::Transports::StreamableHTTPTransport` or similar) | `bundle open mcp`, read `lib/mcp/server*.rb` | Adjust `Server`/`Endpoint` wrapping; names in §4 are ours anyway |
-| A3 ❓ **M0** | The transport can be driven from a Rack env (`handle_request(rack_request)` → `[status, headers, body]`) and mounted at an arbitrary path (respects `SCRIPT_NAME`) | Spike: mount it in a bare Rails app, `curl` initialize | Write our own Rack adapter in `endpoint.rb` (Django does the same with its ASGI bridge, §1A.2) |
-| A4 ❓ **M0** | It can run **stateless**, so we own session rules ourselves, as django-mcp-server does (§1A.2) | Source + spike: `tools/call` without an SDK session | Endpoint implements JSON-RPC dispatch directly, using the SDK only for tool/schema types |
-| A5 ❓ **M0** | It can return **plain JSON responses** (the `json_response=True` equivalent), not only SSE | Source + spike | Buffer the SSE stream and unwrap it in `Endpoint` |
-| A6 ❓ M1 | It supports tool errors (`isError: true`) and embedded resources (needed for `output_as_resource`) | Source; spike a raising tool | Build the response payload by hand |
-| A7 ❓ M1 | It negotiates the protocol versions current clients send (`2025-03-26`, `2025-06-18`, newer) | Spike with Claude Code and the MCP Inspector | Pin the client protocol in docs; contribute upstream |
-| A8 ❓ M1 | Current MCP clients accept plain JSON (non-SSE) responses from a Streamable HTTP server. django-mcp-server relies on this | Spike with Claude Code, MCP Inspector, one more client | Add SSE output (moves from out-of-scope into v1) |
-| A9 ❓ M0 | `fast-mcp` is a weaker base than the official SDK (Decision 2) | Compare both repos at M0: spec coverage, transport, issues | Swap the base; §2 mapping still holds |
-| A10 ❓ M0 | The SDK's Ruby requirement is ≤ 3.2 (our stated minimum) | gemspec `required_ruby_version` | Raise our minimum Ruby |
+| A1 ✅ | The official SDK is published as gem `mcp` (modelcontextprotocol/ruby-sdk) and is maintained | `gem info mcp -r`; GitHub activity, release cadence | Fall back to `fast-mcp`, or implement JSON-RPC + Streamable HTTP ourselves (≈ +1 milestone) |
+| A2 ✅ | It exposes `MCP::Server`, `MCP::Tool`, `MCP::Tool::Response` and a **Streamable HTTP transport** (`MCP::Server::Transports::StreamableHTTPTransport` or similar) | `bundle open mcp`, read `lib/mcp/server*.rb` | Adjust `Server`/`Endpoint` wrapping; names in §4 are ours anyway |
+| A3 ✅ | The transport can be driven from a Rack env (`handle_request(rack_request)` → `[status, headers, body]`) and mounted at an arbitrary path (respects `SCRIPT_NAME`) | Spike: it *is* a Rack app (`call(env)`) and ignores the path. Its DNS-rebinding guard (default on, loopback `Host` only) must be turned off and left to Rails `config.hosts` | Write our own Rack adapter in `endpoint.rb` (Django does the same with its ASGI bridge, §1A.2) |
+| A4 ✅ | It can run **stateless**, so we own session rules ourselves, as django-mcp-server does (§1A.2) | Source + spike: `tools/call` without an SDK session | Endpoint implements JSON-RPC dispatch directly, using the SDK only for tool/schema types |
+| A5 ✅ | It can return **plain JSON responses** (the `json_response=True` equivalent), not only SSE | Source + spike | Buffer the SSE stream and unwrap it in `Endpoint` |
+| A6 ✅ / ⚠️ | It supports tool errors (`isError: true`) and embedded resources (needed for `output_as_resource`) | Spike: resources and `Response.new(…, error: true)` work, but a raising tool or an unknown tool becomes a JSON-RPC error (message hidden), whereas FastMCP returns `isError` results. C6/C9 must rescue and build `isError` responses | Build the response payload by hand |
+| A7 ✅ | It negotiates the protocol versions current clients send (`2025-03-26`, `2025-06-18`, newer) | Spike: 2025-03-26, 2025-06-18 and 2025-11-25 are negotiated. An unknown version gets the newest handshake version | Pin the client protocol in docs; contribute upstream |
+| A8 ❓ M1 | Current MCP clients accept plain JSON (non-SSE) responses from a Streamable HTTP server. django-mcp-server relies on this | The Python SDK client works against the spike; still to try: Claude Code, MCP Inspector | Add SSE output (moves from out-of-scope into v1) |
+| A9 — moot | `fast-mcp` is a weaker base than the official SDK (Decision 2) | Not evaluated further: the official SDK covers everything the port uses (spike) | Swap the base; §2 mapping still holds |
+| A10 ✅ | The SDK's Ruby requirement is ≤ 3.2 (our stated minimum) | `mcp` 1.8.1 requires Ruby ≥ 2.7 | Raise our minimum Ruby |
 
 ### 10.2 django-mcp-server behaviour we promise parity with
 
@@ -596,6 +599,6 @@ parity-suite test, since reading code isn't running it.
 
 | # | Assumption | How to check | If wrong |
 |---|---|---|---|
-| A37 ❓ M0 | `ror-mcp-server` / `rails-mcp-server` are free on RubyGems and the `RorMcp` constant doesn't collide | `gem search -e ror-mcp-server rails-mcp-server`; GitHub search | Pick another name (Decision 1) |
+| A37 ✅ | `ror-mcp-server` / `rails-mcp-server` are free on RubyGems and the `RorMcp` constant doesn't collide | `ror-mcp-server` is free; `rails-mcp-server` is taken (2026-10-23) | Pick another name (Decision 1) |
 | A38 ❓ M0 | No existing gem already does this (ActiveRecord collections + Mongo-style pipeline over MCP) | Search RubyGems/GitHub for "mcp activerecord", "rails mcp server" | Contribute to or build on it instead |
 | A39 ❓ M0 | A real Rails app needs this soon enough to act as first consumer (Decision 5) | Name the app and its first server's models | Build against the dummy app only; risk of an over-generic API |

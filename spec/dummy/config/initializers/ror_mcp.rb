@@ -1,7 +1,7 @@
 # Mirrors spec/parity/django_app/refproject/settings.py + urls.py.
-# Until the ror-mcp-server gem exists (PLAN.md §8), RorMcp is undefined: app/mcp
+# Until the gem ships the DSL (RorMcp::Collection, M2), app/mcp
 # is ignored by the autoloader (config/application.rb) and nothing is mounted.
-return unless defined?(RorMcp)
+return unless defined?(RorMcp::Collection)
 
 RorMcp.configure do |c|
   c.pipeline_semantics = :parity

@@ -10,8 +10,8 @@ gem "puma", ">= 5.0"
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
-# The gem under test. Uncomment once the repo root has ror-mcp-server.gemspec (PLAN.md M0).
-# gem "ror-mcp-server", path: "../.."
+# The gem under test. Safe to enable now: app/mcp stays dormant until RorMcp::Collection exists (M2).
+gem "ror-mcp-server", path: "../.."
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"
