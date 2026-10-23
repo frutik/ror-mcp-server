@@ -41,8 +41,7 @@ module Dummy
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    # app/mcp is written against the planned RorMcp DSL; keep it out of
-    # autoloading until the gem is in the bundle (see config/initializers/ror_mcp.rb).
-    Rails.autoloaders.main.ignore(Rails.root.join("app/mcp")) unless defined?(RorMcp::Collection)
+    # app/mcp/**/*_tools.rb use RorMcp::Toolset, which the gem ships in M5.
+    Rails.autoloaders.main.ignore(Rails.root.join("app/mcp/**/*_tools.rb")) unless defined?(RorMcp::Toolset)
   end
 end

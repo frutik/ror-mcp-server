@@ -4,6 +4,8 @@ module Shop
     collection_name "customer"
     # Whitelist shapes only the schema in :parity mode: without $project rows still carry email and notes.
     fields :id, :name, :country, :active, :signed_up_on
+    description "A person or company that places orders."
+    choice_labels :country, "NL" => "Netherlands", "BE" => "Belgium", "DE" => "Germany"
 
     # Not applied when another collection reaches customers via $lookup (in :parity mode).
     def scope(_context)

@@ -25,8 +25,9 @@ Licensed under the **MIT License**.
 
 > [!IMPORTANT]
 > **Pre-release: most of the API below is the target, not yet the implementation.**
-> Milestone **M1** is done: servers, the Rack endpoint, authentication, sessions and
-> `get_server_instructions` work. Collections and tools are next. Features are built milestone
+> Milestones **M1–M2** are done: servers, the Rack endpoint, authentication, sessions,
+> collections and `query_data_collections` with `$match $sort $skip $limit $project` work.
+> `$lookup` is next, then `$group`/search and tools. Features are built milestone
 > by milestone (see [Project status](#project-status)), and each section is marked with the
 > milestone that delivers it. The design lives in
 > [`PLAN.md`](PLAN.md).
@@ -56,7 +57,7 @@ Licensed under the **MIT License**.
 |---|---|---|
 | **M0** | Gemspec, Django reference app + recorded golden output, Rails dummy app, parity client, transport spike | ✅ done (CI matrix open) |
 | **M1** | `RorMcp::Server`, `RorMcp::Endpoint`, authentication, session stores, `get_server_instructions` | ✅ done: the Rails app matches all 11 recorded HTTP/session scenarios |
-| **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | planned |
+| **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | ✅ done: descriptions match Django byte for byte; 78/120 parity cases pass |
 | **M3** | `$lookup`, references, multiple servers | planned |
 | **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | planned |
 | **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | planned |
@@ -390,6 +391,10 @@ class Sales::OrderCollection < RorMcp::Collection
     "customer" references the customer collection. Latest = highest id.
   TXT
 
+  description "One row per order placed by a customer."    # schema description (Django: model docstring)
+  describe :total, "Order total in cents"                  # field description (Django: help_text)
+  choice_labels :currency, "EUR" => "Euro", "USD" => "US dollar"   # enum labels (Django: choices)
+
   def scope(context)                        # row-level filtering; context comes from authenticate
     Order.all
   end
@@ -409,14 +414,19 @@ end
 | `reference` | Declares where an association points when it can't be inferred (STI, polymorphic, custom `class_name`). |
 | `max_limit` | Upper bound on `$limit` for this collection. |
 | `instructions` | Extra text appended to the collection's schema in the tool description. |
+| `description` | The schema's top-level description. Default: `Model(field, …)`, like Django's auto docstring. |
+| `describe` | A field's description. Default: the column comment, where the database has comments. |
+| `choice_labels` | Labels for an enum's values. Default: the humanized enum key. |
 | `output_format` / `output_as_resource` | See [Output formats](#output-formats-and-embedded-resources). |
 | `connects_to` / `routing_field` | See [Multiple databases and sharding](#multiple-databases-and-sharding). |
 | `abstract!` | Marks a shared base class, which is never published itself. |
 | `scope(context)` | The relation queries start from (django-mcp-server's `get_queryset`). |
 
 The schema comes from the model: column types → `bsonType`, `belongs_to` → `objectId` +
-`ref`, `enum` → `enum`, `null: false` → `required`, and column comments → descriptions
-(on databases that support comments).
+`ref`, `enum` → `enum`, `null: false` → `required` (except auto-increment keys and string
+columns defaulting to `""`), and column comments or `describe` → descriptions. The schema
+is printed in the same Python-`repr` form django-mcp-server uses, so descriptions match
+byte for byte.
 
 ---
 

@@ -6,6 +6,7 @@ module Analytics
     collection_name "order"
     # "customer" is dropped from the schema in :parity mode: only VipCustomer is published here.
     fields :id, :number, :customer, :status, :total, :placed_at
+    description "One row per order placed by a customer."
     output_format :csv
   end
 end

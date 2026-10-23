@@ -193,11 +193,13 @@ def record(servers, out_dir, only=None):
 
 # --- comparison ---------------------------------------------------------------
 
-def _strip_titles(obj):
+def _strip_titles(obj, top=True):
+    # pydantic adds "title" everywhere; the Ruby SDK adds a top-level "$schema"
+    # (JSON Schema 2020-12, required by MCP 2025-11-25). Neither changes the schema.
     if isinstance(obj, dict):
-        return {k: _strip_titles(v) for k, v in obj.items() if k != "title"}
+        return {k: _strip_titles(v, False) for k, v in obj.items() if k != "title" and not (top and k == "$schema")}
     if isinstance(obj, list):
-        return [_strip_titles(v) for v in obj]
+        return [_strip_titles(v, False) for v in obj]
     return obj
 
 
@@ -211,9 +213,19 @@ def _diff(a, b):
 SEARCH_FIELDS_LINE = re.compile(r"^(Full text search is supported on the following fields: )(.*)\.$", re.M)
 
 
+COLLECTIONS_HEADING = "## Available collections to query\n"
+
+
 def _normalize_description(text):
     # django-mcp-server joins a Python set here, so the field order is arbitrary.
-    return SEARCH_FIELDS_LINE.sub(lambda m: m.group(1) + ", ".join(sorted(m.group(2).split(", "))) + ".", text or "")
+    text = SEARCH_FIELDS_LINE.sub(lambda m: m.group(1) + ", ".join(sorted(m.group(2).split(", "))) + ".", text or "")
+    # Collections are listed in registration order: Python definition order in
+    # Django, file load order in Rails. Neither means anything to a client.
+    head, sep, tail = text.partition(COLLECTIONS_HEADING)
+    if not sep:
+        return text
+    sections = tail.split("\n### '")
+    return head + sep + sections[0] + "".join("\n### '" + s for s in sorted(sections[1:]))
 
 
 def compare_tools(expected, actual):

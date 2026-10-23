@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-M1 done (M0's CI matrix still open). `lib/ror_mcp/` has Configuration, Server (wraps `MCP::Server`), Endpoint (Rack: auth → Django session rules → SDK transport, stateless + JSON), SessionStore::{Memory,Cache} and Engine. The SDK findings behind that design are in `spike/transport/README.md`. Next is M2: Collection DSL, schema, `query_data_collections`. The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
+M2 done (M0's CI matrix still open). `lib/ror_mcp/`: Configuration, Server, Endpoint (Rack: auth → Django session rules → SDK transport), SessionStore, Engine (loads `app/mcp` in `to_prepare`), Registry + Collection DSL, Schema (Django's `$jsonSchema`, printed with `PythonRepr`), Pipeline::{Fields,Match,Compiler}, Executor, Renderers::Json (DRF's encoding), Tools::QueryTool. `tools/query_tool_text.rb` is generated: run `spec/parity/bin/generate-query-tool-text`. SDK findings: `spike/transport/README.md`. Next is M3: `$lookup`. Parity: 78/120 against the dummy app. The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
 
 ## Commands
 

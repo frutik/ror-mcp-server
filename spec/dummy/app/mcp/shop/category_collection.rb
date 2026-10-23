@@ -7,5 +7,7 @@ module Shop
     model Category
     collection_name "category"
     fields :all
+    description "A node of the product category tree."
+    describe :parent, "Parent category, null for a root"
   end
 end

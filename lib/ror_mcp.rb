@@ -2,9 +2,22 @@
 
 require "rack"
 require "mcp"
+require "active_record"
 require_relative "ror_mcp/version"
 require_relative "ror_mcp/configuration"
 require_relative "ror_mcp/session_store"
+require_relative "ror_mcp/python_repr"
+require_relative "ror_mcp/registry"
+require_relative "ror_mcp/collection"
+require_relative "ror_mcp/schema"
+require_relative "ror_mcp/pipeline/errors"
+require_relative "ror_mcp/pipeline/fields"
+require_relative "ror_mcp/pipeline/match"
+require_relative "ror_mcp/pipeline/compiler"
+require_relative "ror_mcp/renderers/json"
+require_relative "ror_mcp/tools/query_tool_text"
+require_relative "ror_mcp/tools/query_tool"
+require_relative "ror_mcp/executor"
 require_relative "ror_mcp/server"
 require_relative "ror_mcp/endpoint"
 
@@ -23,6 +36,11 @@ module RorMcp
 
     def configuration
       @configuration ||= Configuration.new
+    end
+
+    # Every Collection subclass, in definition order.
+    def registry
+      @registry ||= Registry.new
     end
 
     # The servers declared in the configuration, built once: each holds its

@@ -172,6 +172,9 @@ reproduce them:
   and a `list` return becomes one text content per element. An unknown tool, a
   missing argument or an exception all give `isError: true`, not a JSON-RPC error.
 - **HTTP**: `notifications/*` → 202. DELETE → 200 with a non-JSON body.
+- **Collection order** in the description is registration order (Python definition order). Rails registers in file load order, so the parity client compares collection sections order-insensitively.
+- **`$match` under negation** (`$ne`, `$nin`, `$nor`) keeps rows where a nullable column is NULL: Django adds `col IS NOT NULL` inside the `NOT`. `$limit` slices the queryset, so a later `$match`/`$sort` fails ("Cannot filter a query once a slice has been taken.").
+- **SDK difference**: the Ruby SDK adds a top-level `"$schema"` (JSON Schema 2020-12) to every tool input schema; the parity client ignores it, like pydantic's `title` keys.
 
 ---
 
@@ -505,7 +508,7 @@ resolve, budget).
 |---|---|---|
 | M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed. **Done:** reference app, golden recordings, parity client, Rails dummy app with matching schema/data; gemspec (loads in the dummy app); transport spike passes 11/11 HTTP parity scenarios (`spike/transport/README.md`). **Open:** CI matrix |
 | M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools. **Done:** `spec/dummy` passes 11/11 HTTP parity scenarios, and the Python SDK client lists and calls tools on both servers. Full corpus: 15/120 (the rest needs M2–M5). `SessionStore::Null` dropped: stateless servers skip the store |
-| M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass |
+| M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass. **Done:** both servers' `query_data_collections` descriptions (every `$jsonSchema`) match Django byte for byte, and every corpus case within M2's stages passes. Full corpus 78/120; the rest needs `$lookup` (M3), `$group`/`$text`/`$search`/extended operators (M4), toolsets/CSV (M5). Django error cases that use those stages currently match on a "not supported yet" error and are re-verified when the stage lands |
 | M3 | `$lookup`, references, thin join targets, multiple servers | §3 rows for name clashes, class-name registry, proxy/STI refs and `_id` mangling green |
 | M4 | `$group`, `$text/$search`, `extra_filters`, computed fields (incl. via `$lookup`) | Full parity suite green |
 | M5 | `Toolset` DSL, write tools, renderers (json/csv), `serialize_with` | A custom tool and a write tool work from an MCP client |
@@ -578,10 +581,10 @@ parity-suite test, since reading code isn't running it.
 | A23 ❓ M6 | `while_preventing_writes` alone is not a sufficient read-only guarantee (it inspects SQL text only), so a DB-level `READ ONLY` transaction is needed too | A `computed sql:` calling a side-effecting function | — (already planned; also recommend a read-only DB role in docs) |
 | A24 ❓ M3 | Arel can build `belongs_to` joins with **client-chosen table aliases** (`as`) and chain them (`a1.a2.field`), including self-joins | Spike `Arel::Table.new(t, as: alias)` joins | Generate internal aliases and map client aliases onto them |
 | A25 ❓ M3 | A target collection's `scope(context)` can be applied as a join condition (fixed mode) | Spike: `scope.where_clause` merged into the join `ON`, or a subquery join | Use `INNER JOIN (scope SQL) AS alias`; document the cost |
-| A26 ❓ M2 | `Rails.autoloaders.main.eager_load_dir` (Zeitwerk ≥ 2.6) works in a railtie for `app/mcp` in dev with reloading | Spike in dummy app; edit a collection, reload | Explicit `RorMcp.register` calls or a `to_prepare` hook |
+| A26 ✅ (boot) / ❓ (reload) | `Rails.autoloaders.main.eager_load_dir` (Zeitwerk ≥ 2.6) works in a railtie for `app/mcp` in dev with reloading | Spike in dummy app; edit a collection, reload | Explicit `RorMcp.register` calls or a `to_prepare` hook. The engine's `to_prepare` clears the registry and eager-loads `app/mcp`; works at boot in the dummy app. Reload not exercised yet |
 | A27 ❓ M3 | `reflect_on_association` + STI/subclass checks resolve references the way §3 promises | Specs with STI models and `class_name:` associations | Require explicit `reference … to:` |
-| A28 ❓ M2 | `defined_enums` and column comments give useful schema descriptions | Column comments exist on PG/MySQL, not on SQLite (the dummy app's migration sets them; SQLite drops them, so `help_text` parity on SQLite needs another source) | Fall back to a `describe :field, "…"` DSL |
-| A29 ❓ M3 | `$regex` can be supported on all three adapters | SQLite has no built-in `REGEXP`; needs a registered function | SQLite: `$regex` unsupported with a clear error |
+| A28 ✅ | `defined_enums` and column comments give useful schema descriptions | Enums give `enum` values. SQLite drops comments, so the DSL has `description` (model docstring), `describe :field, "…"` (help_text) and `choice_labels` (choice labels; default: humanized enum key). Column comments are used when present | — |
+| A29 ✅ (SQLite) / ❓ (PG, MySQL) | `$regex` can be supported on all three adapters | SQLite: the executor registers a `regexp()` function per connection (as Django does), so `col REGEXP pat` works. PG `~` / MySQL `REGEXP BINARY` still to add | SQLite: `$regex` unsupported with a clear error |
 | A30 ❓ M2 | `Rails.cache` is a valid shared session store | Only if the app uses Redis/Memcached; `memory_store` and `file_store` are per-process | Document it, and raise at boot when `session_store = :cache` with a non-shared cache in production |
 | A31 ❓ M1 | Multi-process Puma / several hosts break `:memory` sessions | Known for any per-process store | — (only changes the documented default) |
 

@@ -44,7 +44,10 @@ submodule changes: `mcp_parity.py record` (against a freshly started
   202 for notifications, stateless second server, 401 + `WWW-Authenticate:
   Bearer` without a valid token.
 - **tools/list** per server: tool names, descriptions (including the full
-  `query_data_collections` text) and input schemas, ignoring pydantic `title` keys.
+  `query_data_collections` text) and input schemas, ignoring pydantic `title` keys
+  and the top-level `"$schema"` the Ruby SDK adds. Collection sections in the
+  description are compared in any order (registration order differs: Python
+  definition order vs Rails file load order).
 - **Every corpus case**: the `content` array, byte for byte. Use `--semantic`
   to accept JSON that only differs in formatting. When the reference returns
   an error, the port only has to return an error too; its wording may differ.

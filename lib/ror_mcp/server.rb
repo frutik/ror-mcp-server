@@ -34,7 +34,7 @@ module RorMcp
       @stateless
     end
 
-    # Registers an MCP::Tool (collections and toolsets add theirs in later milestones).
+    # Registers an extra MCP::Tool (toolsets add theirs in M5).
     def add_tool(tool)
       @mutex.synchronize do
         @tools << tool
@@ -42,12 +42,24 @@ module RorMcp
       end
     end
 
+    # In django-mcp-server's order: get_server_instructions, toolset tools, query_data_collections.
     def tools
-      @instructions_tool ? [instructions_tool, *@tools] : @tools.dup
+      list = @instructions_tool ? [instructions_tool, *@tools] : @tools.dup
+      collections = RorMcp.registry.collections_for(@key)
+      list << Tools::QueryTool.build(collections) unless collections.empty?
+      list
     end
 
+    # Rebuilt when collections change (code reload in development).
     def mcp_server
-      @mutex.synchronize { @mcp_server ||= build_mcp_server }
+      @mutex.synchronize do
+        if @mcp_server.nil? || @registry_version != RorMcp.registry.version
+          @registry_version = RorMcp.registry.version
+          @mcp_server = build_mcp_server
+          @transport = nil
+        end
+        @mcp_server
+      end
     end
 
     # The SDK always runs stateless with JSON responses, as django-mcp-server runs
@@ -77,7 +89,8 @@ module RorMcp
 
     def instructions_tool
       text = @instructions.to_s
-      MCP::Tool.define(name: INSTRUCTIONS_TOOL_NAME, description: INSTRUCTIONS_TOOL_DESCRIPTION) do
+      MCP::Tool.define(name: INSTRUCTIONS_TOOL_NAME, description: INSTRUCTIONS_TOOL_DESCRIPTION,
+                       input_schema: { properties: {} }) do
         MCP::Tool::Response.new([{ type: "text", text: text }])
       end
     end

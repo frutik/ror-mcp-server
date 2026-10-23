@@ -1,6 +1,4 @@
 # Mirrors spec/parity/django_app/refproject/settings.py + urls.py.
-# app/mcp (collections, toolsets) stays out of autoloading until the gem ships
-# RorMcp::Collection (M2); see config/application.rb.
 
 RorMcp.configure do |c|
   c.pipeline_semantics = :parity
