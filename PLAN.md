@@ -330,7 +330,7 @@ module Sales
     max_limit 500
 
     computed :line_count, :integer,
-             sql: "(SELECT count(*) FROM line_items WHERE line_items.order_id = orders.id)",
+             sql: "SELECT count(*) FROM line_items WHERE line_items.order_id = {table}.id",
              doc: "number of line items in the order"
 
     instructions <<~TXT
@@ -510,7 +510,7 @@ resolve, budget).
 | M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools. **Done:** `spec/dummy` passes 11/11 HTTP parity scenarios, and the Python SDK client lists and calls tools on both servers. Full corpus: 15/120 (the rest needs M2–M5). `SessionStore::Null` dropped: stateless servers skip the store |
 | M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass. **Done:** both servers' `query_data_collections` descriptions (every `$jsonSchema`) match Django byte for byte, and every corpus case within M2's stages passes. Full corpus 78/120; the rest needs `$lookup` (M3), `$group`/`$text`/`$search`/extended operators (M4), toolsets/CSV (M5). Django error cases that use those stages currently match on a "not supported yet" error and are re-verified when the stage lands |
 | M3 | `$lookup`, references, thin join targets, multiple servers | §3 rows for name clashes, class-name registry, proxy/STI refs and `_id` mangling green. **Done (`:parity`):** `$lookup` exactly as django-mcp-server does it (aliases recorded first, `localField.replace("_id","")`, `from` checked against published model names only, target scope and `fields` not applied); paths join `belongs_to` targets with LEFT JOINs under per-path aliases (chains, self-references); joined values cast by their own model. Name-clash and class-name registry rows are green (registry specs). The proxy/STI and `_id`-mangling *fixes* are `:fixed`-mode behaviour and move to M6. Parity 88/120; the rest is M4/M5 |
-| M4 | `$group`, `$text/$search`, `extra_filters`, computed fields (incl. via `$lookup`) | Full parity suite green |
+| M4 | `$group`, `$text/$search`, `extra_filters`, computed fields (incl. via `$lookup`) | Full parity suite green. **Done:** `$group` (null / `"$f"` / object `_id`, Django's key naming and nesting, subquery over `$limit`, `$skip` ignored, SQLite decimal converters: sum/min/max to column scale, avg to 15 significant digits), `$text` and `$search` (escaped LIKE per word), `extra_filters` lookups (contains/startswith/endswith with `i` variants, iexact, regex/iregex, range, year as a range, date, month/day/hour/minute/second/week_day/quarter), computed fields (`{table}` binds the table or join alias; usable in every stage and through `$lookup`). Parity 106/120 + 1 documented deviation (`group-sum-1-non-id-pk`, COUNT(*)); the rest is M5 |
 | M5 | `Toolset` DSL, write tools, renderers (json/csv), `serialize_with` | A custom tool and a write tool work from an MCP client |
 | M6 | Safety envelope, `connects_to`, `routing_field`, description budget, instrumentation, fixed mode | Multi-DB and sharded cases green; fixed-mode corpus green |
 | M7 | Generators, rake tasks, README + usage guide, 0.1.0 release | A fresh Rails app goes from `bundle add` to a connected server in under 15 minutes following the README |

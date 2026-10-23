@@ -69,6 +69,7 @@ module RorMcp
         properties[field.name] = property(collection, field)
         required << field.name if required?(field)
       end
+      collection.computed_fields.each_value { |computed| properties[computed.name] = computed_property(computed) }
 
       body = { "bsonType" => "object", "properties" => properties }
       body["required"] = required unless required.empty?
@@ -98,6 +99,12 @@ module RorMcp
         prop["description"] = prop.key?("description") ? "#{prop['description']} Choices: #{listing}" : "Choices: #{listing}"
       end
       prop
+    end
+
+    def computed_property(computed)
+      note = "Computed value, not a stored column or reference."
+      { "bsonType" => BSON_TYPES.fetch(computed.type, "string"),
+        "description" => computed.doc ? "#{computed.doc}. #{note}" : note }
     end
 
     # { stored value => label } for a Rails enum, or nil.

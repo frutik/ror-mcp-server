@@ -12,6 +12,24 @@ module RorMcp
   class Collection
     OUTPUT_FORMATS = %i[json csv jsonl].freeze
 
+    # A value computed in SQL (`computed :line_count, :integer, sql: "…"`). "{table}"
+    # in the SQL stands for the collection's table, or its alias when reached
+    # through a $lookup.
+    Computed = Struct.new(:name, :type, :sql, :doc, keyword_init: true) do
+      def attname = name
+      def reference? = false
+      def primary_key = false
+      def text? = false
+
+      def expression(table, connection)
+        Arel.sql("(#{sql.gsub('{table}', connection.quote_table_name(table.name))})")
+      end
+
+      def database_type
+        ActiveRecord::Type.lookup(type)
+      end
+    end
+
     class << self
       def inherited(subclass)
         super
@@ -83,6 +101,16 @@ module RorMcp
 
       def all_choice_labels
         setting(:choice_labels) || {}
+      end
+
+      # A field computed in SQL: published in the schema and usable in every stage,
+      # also from other collections through $lookup.
+      def computed(name, type, sql:, doc: nil)
+        @computed = computed_fields.merge(name.to_s => Computed.new(name: name.to_s, type: type.to_sym, sql: sql, doc: doc))
+      end
+
+      def computed_fields
+        setting(:computed) || {}
       end
 
       def output_format(format = nil)

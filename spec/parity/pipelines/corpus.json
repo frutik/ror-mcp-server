@@ -1,5 +1,5 @@
 {
-  "_comment": "Parity corpus. Each case is one tools/call. Query cases give collection+pipeline (tool query_data_collections); tool cases give tool+arguments. 'covers' names the behaviour (PLAN §1A.6) the case pins.",
+  "_comment": "Parity corpus. Each case is one tools/call. A case with parity_deviation is a documented, intended difference: the checker reports it instead of failing. Query cases give collection+pipeline (tool query_data_collections); tool cases give tool+arguments. 'covers' names the behaviour (PLAN §1A.6) the case pins.",
   "cases": [
     {"id": "match-literal", "server": "default", "collection": "order", "covers": "$match literal → equality", "pipeline": [{"$match": {"status": "paid"}}, {"$sort": {"id": 1}}, {"$project": {"id": 1, "number": 1, "status": 1}}]},
     {"id": "match-eq", "server": "default", "collection": "order", "covers": "$eq", "pipeline": [{"$match": {"status": {"$eq": "shipped"}}}, {"$sort": {"id": 1}}, {"$project": {"number": 1}}]},
@@ -83,7 +83,7 @@
     {"id": "group-count-field", "server": "default", "collection": "order", "covers": "$count with a field reference (non-null count)", "pipeline": [{"$group": {"_id": null, "orders": {"$count": 1}, "billed": {"$count": "$billing_identity"}}}]},
     {"id": "group-compound-id", "server": "default", "collection": "order", "covers": "compound _id with a lookup alias → nested _id", "pipeline": [{"$lookup": {"from": "customer", "localField": "customer", "foreignField": "_id", "as": "c"}}, {"$group": {"_id": {"status": "$status", "country": "$c.country"}, "n": {"$sum": 1}}}]},
     {"id": "group-by-alias", "server": "default", "collection": "lineitem", "covers": "group by a lookup alias field", "pipeline": [{"$lookup": {"from": "product", "localField": "product", "foreignField": "_id", "as": "p"}}, {"$group": {"_id": "$p.category", "qty": {"$sum": "$quantity"}}}]},
-    {"id": "group-sum-1-non-id-pk", "server": "default", "collection": "product", "covers": "quirk: $sum 1 is Count('id') → fails on a model whose PK isn't id", "pipeline": [{"$group": {"_id": null, "n": {"$sum": 1}}}]},
+    {"id": "group-sum-1-non-id-pk", "server": "default", "collection": "product", "covers": "quirk: $sum 1 is Count('id') → fails on a model whose PK isn't id", "parity_deviation": "PLAN §1B: ror-mcp-server counts with COUNT(*) in both modes, so this succeeds", "pipeline": [{"$group": {"_id": null, "n": {"$sum": 1}}}]},
     {"id": "group-with-limit", "server": "default", "collection": "order", "covers": "$limit before $group (aggregate over a sliced queryset)", "pipeline": [{"$sort": {"id": 1}}, {"$limit": 5}, {"$group": {"_id": null, "n": {"$sum": 1}}}]},
     {"id": "group-not-last", "server": "default", "collection": "order", "covers": "$group not last → error", "pipeline": [{"$group": {"_id": null, "n": {"$sum": 1}}}, {"$limit": 1}]},
     {"id": "group-after-project", "server": "default", "collection": "order", "covers": "$project before $group → error", "pipeline": [{"$project": {"status": 1}}, {"$group": {"_id": "$status", "n": {"$sum": 1}}}]},

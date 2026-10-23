@@ -80,3 +80,67 @@ module RorMcp
     end
   end
 end
+
+module RorMcp
+  module Pipeline
+    class Lookups
+      # Django field lookups beyond the base operators, compiled to the SQL
+      # Django generates (LIKE with escaping, year as a range, date-part
+      # extraction). On SQLite, LIKE is case-insensitive for ASCII either way,
+      # as it is for Django.
+      LIKE_PATTERNS = {
+        "contains" => "%%%s%%", "icontains" => "%%%s%%", "startswith" => "%s%%", "istartswith" => "%s%%",
+        "endswith" => "%%%s", "iendswith" => "%%%s", "iexact" => "%s",
+      }.freeze
+      DATE_PARTS = %w[month day hour minute second week_day quarter].freeze
+
+      def self.extended(kind, attribute, value, resolved, connection, field)
+        sqlite = connection.adapter_name.match?(/sqlite/i)
+        case kind
+        when *LIKE_PATTERNS.keys
+          pattern = format(LIKE_PATTERNS[kind], value.to_s.gsub(/[\\%_]/) { |c| "\\#{c}" })
+          attribute.matches(pattern, "\\", !kind.start_with?("i"))
+        when "regex", "iregex"
+          pattern = kind == "iregex" ? "(?i)#{value}" : value.to_s
+          Arel::Nodes::InfixOperation.new(sqlite ? "REGEXP" : (kind == "iregex" ? "~*" : "~"), attribute, Arel::Nodes.build_quoted(pattern))
+        when "range"
+          raise QueryError, "$range takes [low, high]" unless value.is_a?(Array) && value.size == 2
+
+          attribute.between(value[0]..value[1])
+        when "year"
+          # Django turns an exact year into a range, so it can use indexes.
+          year = Integer(value)
+          date = %i[date].include?(resolved.field.column&.type)
+          low, high = date ? [Date.new(year, 1, 1), Date.new(year + 1, 1, 1)] : [Time.utc(year), Time.utc(year + 1)]
+          Arel::Nodes::Grouping.new(attribute.gteq(low).and(attribute.lt(high)))
+        when "date"
+          date = sqlite ? Arel::Nodes::NamedFunction.new("date", [attribute]) : Arel::Nodes::NamedFunction.new("CAST", [attribute.as(Arel.sql("date"))])
+          date.eq(Arel::Nodes.build_quoted(value.to_s))
+        when *DATE_PARTS
+          date_part(kind, attribute, connection).eq(Integer(value))
+        else
+          raise QueryError, "Unsupported lookup '#{kind}' for field '#{field}'"
+        end
+      rescue ArgumentError, TypeError => e
+        raise QueryError, "Invalid value for $#{kind} on '#{field}': #{e.message}"
+      end
+
+      SQLITE_FORMATS = { "month" => "%m", "day" => "%d", "hour" => "%H", "minute" => "%M", "second" => "%S", "week_day" => "%w" }.freeze
+
+      def self.date_part(kind, attribute, connection)
+        column = connection.visitor.accept(attribute, Arel::Collectors::SQLString.new).value
+        if connection.adapter_name.match?(/sqlite/i)
+          return Arel.sql("((CAST(strftime('%m', #{column}) AS INTEGER) + 2) / 3)") if kind == "quarter"
+
+          part = "CAST(strftime('#{SQLITE_FORMATS.fetch(kind)}', #{column}) AS INTEGER)"
+          # Django's week_day: 1 = Sunday … 7 = Saturday; strftime('%w') is 0 = Sunday.
+          return Arel.sql(kind == "week_day" ? "(#{part} + 1)" : part)
+        end
+
+        return Arel.sql("(EXTRACT(DOW FROM #{column}) + 1)") if kind == "week_day"
+
+        Arel.sql("EXTRACT(#{kind.upcase} FROM #{column})")
+      end
+    end
+  end
+end

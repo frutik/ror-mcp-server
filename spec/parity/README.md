@@ -53,6 +53,8 @@ submodule changes: `mcp_parity.py record` (against a freshly started
   an error, the port only has to return an error too; its wording may differ.
   The error must come from the same tool: if the tool isn't published on the
   target, the case fails. `structuredContent` is not compared.
+- A case with `"parity_deviation"` in the corpus is an intended, documented
+  difference (PLAN §1B). The checker reports it as `dev`, not as a failure.
 
 The golden files pin `:parity` semantics. `:fixed` mode (PLAN §1B) will need
 its own expected directory.

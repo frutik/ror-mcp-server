@@ -11,6 +11,11 @@ RSpec.describe RorMcp::Pipeline::Compiler do
     end
   end
 
+  let(:orders_with_customers) do
+    customers
+    orders
+  end
+
   let(:customers) do
     define_collection("CustomerCollection") do
       model ShopDb::Customer
@@ -18,8 +23,10 @@ RSpec.describe RorMcp::Pipeline::Compiler do
     end
   end
 
+  # Every collection defined in the example is "published on the server".
   def rows(pipeline, collection = orders, relation: collection.model.all)
-    described_class.new(collection, relation).rows(JSON.parse(JSON.generate(pipeline)))
+    collections = RorMcp.registry.published.to_h { |c| [c.name, c] }
+    described_class.new(collection, relation, collections: collections).rows(JSON.parse(JSON.generate(pipeline)))
   end
 
   def ids(pipeline, collection = orders, **options)
@@ -133,15 +140,153 @@ RSpec.describe RorMcp::Pipeline::Compiler do
     expect { rows([{ "$unwind" => "$items" }]) }.to raise_error("Unsupported stage {'$unwind': '$items'} : please review pipeline syntax constraints")
   end
 
-  it "names the milestone of stages not built yet" do
-    expect { rows([{ "$group" => { "_id" => nil } }]) }.to raise_error(RorMcp::Pipeline::NotYetSupported, /M4/)
+  describe "$group" do
+    it "aggregates everything with _id null into one row with plain keys" do
+      expect(rows([{ "$group" => { "_id" => nil, "n" => { "$sum" => 1 }, "revenue" => { "$sum" => "$total" },
+                                   "a.b" => { "$count" => "$billing_identity" } } }]))
+        .to eq([{ "n" => 4, "revenue" => BigDecimal("9555.8"), "a.b" => 2 }])
+    end
+
+    it "puts a single key under the field's own name, after the accumulators" do
+      result = rows([{ "$match" => { "status" => { "$ne" => "cancelled" } } },
+                     { "$group" => { "_id" => "$status", "n" => { "$count" => 1 }, "top" => { "$max" => "$total" } } }])
+      expect(result).to eq([{ "n" => 2, "top" => BigDecimal("6549"), "status" => "paid" },
+                            { "n" => 1, "top" => BigDecimal("120"), "status" => "pending" }])
+    end
+
+    it "nests object keys under _id and follows lookup aliases" do
+      result = rows([{ "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "_id", "as" => "c" } },
+                     { "$group" => { "_id" => { "country" => "$c.country" }, "n" => { "$sum" => 1 } } }], orders_with_customers)
+      expect(result).to eq([{ "n" => 2, "_id" => { "country" => "BE" } }, { "n" => 2, "_id" => { "country" => "NL" } }])
+    end
+
+    it "averages decimals to 15 significant digits, like Django on SQLite" do
+      expect(rows([{ "$group" => { "_id" => nil, "avg" => { "$avg" => "$total" } } }])).to eq([{ "avg" => 2388.95 }])
+    end
+
+    it "aggregates within a $limit (subquery) and ignores $skip" do
+      expect(rows([{ "$sort" => { "id" => 1 } }, { "$skip" => 1 }, { "$limit" => 2 }, { "$group" => { "_id" => nil, "n" => { "$sum" => 1 } } }]))
+        .to eq([{ "n" => 2 }])
+    end
+
+    it "counts with COUNT(*), so models without an id column work (documented deviation)" do
+      define_collection("ProductCollection") { model ShopDb::Product; fields :all }
+      expect(rows([{ "$group" => { "_id" => nil, "n" => { "$sum" => 1 } } }], ProductCollection)).to eq([{ "n" => 2 }])
+    end
+
+    it "returns {} without accumulators" do
+      expect(rows([{ "$group" => { "_id" => nil } }])).to eq([{}])
+    end
+
+    it "validates like django-mcp-server" do
+      expect { rows([{ "$group" => { "_id" => nil } }, { "$limit" => 1 }]) }.to raise_error(/must be the last stage/)
+      expect { rows([{ "$group" => { "_id" => nil, "x" => { "$push" => "$id" } } }]) }.to raise_error(/Unsupported aggregation operator: \$push/)
+      expect { rows([{ "$group" => { "_id" => nil, "x" => { "$sum" => 2 } } }]) }.to raise_error(/\$sum only supports 1/)
+      expect { rows([{ "$group" => { "_id" => nil, "x" => { "$avg" => 1 } } }]) }.to raise_error(/\$avg requires a field reference/)
+      expect { rows([{ "$group" => { "_id" => 5 } }]) }.to raise_error(/Unsupported _id value/)
+      expect { rows([{ "$group" => { "_id" => "status" } }]) }.to raise_error(/Unsupported _id value/)
+    end
+  end
+
+  describe "$text and $search" do
+    let(:products) do
+      define_collection("ProductCollection") do
+        model ShopDb::Product
+        fields :all
+        search_fields :name, :description
+      end
+    end
+
+    it "needs every word to match some search field, case-insensitively" do
+      expect(rows([{ "$match" => { "$text" => { "$search" => "LAPTOP 14" } } }, { "$project" => { "sku" => 1 } }], products))
+        .to eq([{ "sku" => "LAP-1" }])
+      expect(rows([{ "$match" => { "$text" => { "$search" => "laptop café" } } }], products)).to eq([])
+    end
+
+    it "combines $text with the rest of the $match" do
+      expect(rows([{ "$match" => { "$text" => { "$search" => "a" }, "price" => { "$lt" => 500 } } }, { "$project" => { "sku" => 1 } }], products))
+        .to eq([{ "sku" => "CAF-1" }])
+    end
+
+    it "treats % and _ literally" do
+      expect(rows([{ "$match" => { "$text" => { "$search" => "%" } } }], products)).to eq([])
+    end
+
+    it "restricts $search to a path within the search fields" do
+      expect(rows([{ "$search" => { "text" => { "query" => "inch", "path" => "description" } } }, { "$project" => { "sku" => 1 } }], products))
+        .to eq([{ "sku" => "LAP-1" }])
+      expect { rows([{ "$search" => { "text" => { "query" => "x", "path" => "sku" } } }], products) }.to raise_error(/not allowed for search/)
+    end
+
+    it "is unavailable without search fields" do
+      define_collection("Plain") { model ShopDb::Order; fields :id }
+      expect { rows([{ "$match" => { "$text" => { "$search" => "x" } } }], Plain) }.to raise_error(/full text search is not supported/)
+    end
+  end
+
+  describe "extended operators (extra_filters)" do
+    let(:filtered) do
+      define_collection("Filtered") do
+        model ShopDb::Order
+        fields :all
+        extra_filters :icontains, :startswith, :endswith, :year, :month, :range, :date
+      end
+    end
+
+    it "applies the enabled Django lookups" do
+      expect(ids([{ "$match" => { "number" => { "$icontains" => "rd-3" } } }], filtered)).to eq([3])
+      expect(ids([{ "$match" => { "number" => { "$startswith" => "ORD-" }, "status" => { "$endswith" => "id" } } }], filtered)).to eq([2, 3])
+      expect(ids([{ "$match" => { "placed_at" => { "$year" => 2025 } } }], filtered)).to eq([3, 4])
+      expect(ids([{ "$match" => { "placed_at" => { "$month" => 12 } } }], filtered)).to eq([2])
+      expect(ids([{ "$match" => { "total" => { "$range" => [100, 500] } } }], filtered)).to eq([1, 4])
+      expect(ids([{ "$match" => { "placed_at" => { "$date" => "2025-01-11" } } }], filtered)).to eq([3])
+    end
+
+    it "rejects lookups that are not enabled" do
+      expect { rows([{ "$match" => { "number" => { "$icontains" => "x" } } }]) }.to raise_error(/Unsupported operator \$icontains/)
+    end
+  end
+
+  describe "computed fields" do
+    let(:with_computed) do
+      define_collection("Computed") do
+        model ShopDb::Customer
+        collection_name "customer"
+        fields :id, :name
+        computed :order_count, :integer, sql: "SELECT count(*) FROM orders WHERE orders.customer_id = {table}.id",
+                                         doc: "orders placed"
+      end
+    end
+
+    it "can be filtered, sorted, projected and grouped" do
+      result = rows([{ "$match" => { "order_count" => { "$gte" => 1 } } }, { "$sort" => { "order_count" => -1 } },
+                     { "$project" => { "name" => 1, "order_count" => 1 } }], with_computed)
+      expect(result).to eq([{ "name" => "Bram", "order_count" => 2 }, { "name" => "Anna", "order_count" => 1 }, { "name" => "Gijs", "order_count" => 1 }])
+      expect(rows([{ "$group" => { "_id" => nil, "total" => { "$sum" => "$order_count" } } }], with_computed)).to eq([{ "total" => 4 }])
+    end
+
+    it "is reachable through $lookup, with {table} bound to the join alias" do
+      with_computed
+      collections = { "order" => orders, "customer" => with_computed }
+      result = described_class.new(orders, ShopDb::Order.all, collections: collections).rows(
+        [{ "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "_id", "as" => "c" } },
+         { "$match" => { "_id" => 4 } }, { "$project" => { "who" => "$c.name", "their_orders" => "$c.order_count" } }],
+      )
+      expect(result).to eq([{ "who" => "Gijs", "their_orders" => 1 }])
+    end
+
+    it "is published in the schema" do
+      expect(RorMcp::Schema.json_schema(with_computed, [ShopDb::Customer]).dig("$jsonSchema", "properties", "order_count"))
+        .to eq("bsonType" => "int", "description" => "orders placed. Computed value, not a stored column or reference.")
+    end
   end
 
   describe "$lookup" do
     let(:published) { [ShopDb::Order, ShopDb::Customer, ShopDb::Category, ShopDb::Product] }
 
     def lookup_rows(pipeline, collection = orders)
-      described_class.new(collection, collection.model.all, published_models: published)
+      collections = published.each_with_index.to_h { |model, i| ["c#{i}", Class.new(RorMcp::Collection).tap { |c| c.model(model) }] }
+      described_class.new(collection, collection.model.all, collections: collections)
                      .rows(JSON.parse(JSON.generate(pipeline)))
     end
 

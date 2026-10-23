@@ -24,7 +24,6 @@ module RorMcp
         return combine(:and, branches(match["$and"], negated)) if match.key?("$and")
         return combine(:or, branches(match["$or"], negated)) if match.key?("$or")
         return negate(combine(:or, branches(match["$nor"], !negated))) if match.key?("$nor")
-        raise NotYetSupported.new("$text", "M4") if match.key?("$text")
 
         nodes = match.flat_map do |field, condition|
           if condition.is_a?(Hash)
@@ -55,9 +54,10 @@ module RorMcp
         when "eq" then value.nil? ? lookup(field, "isnull", true, negated) : lookup(field, "exact", value, negated)
         when "gt", "gte", "lt", "lte", "in", "regex" then lookup(field, name, value, negated)
         else
-          raise NotYetSupported.new("Extended operator #{op}", "M4") if @extra_filters.include?(name)
+          # Any Django lookup the collection enables with extra_filters: {"f": {"$icontains": "x"}}.
+          raise QueryError, "Unsupported operator #{op} : please reveiwe pipeline syntax constraints " unless @extra_filters.include?(name)
 
-          raise QueryError, "Unsupported operator #{op} : please reveiwe pipeline syntax constraints "
+          lookup(field, name, value, negated)
         end
       end
 
@@ -74,8 +74,8 @@ module RorMcp
             raise QueryError, "$in and $nin take a list" unless value.is_a?(Array)
 
             attribute.in(value)
-          when "regex" then Arel::Nodes::InfixOperation.new("REGEXP", attribute, Arel::Nodes.build_quoted(value.to_s))
-          else attribute.public_send(COMPARISONS.fetch(kind), value)
+          when *COMPARISONS.keys then attribute.public_send(COMPARISONS.fetch(kind), value)
+          else Lookups.extended(kind, attribute, value, resolved, @fields.model.connection, field)
           end
 
         if negated && kind != "isnull" && !value.nil? && resolved.nullable

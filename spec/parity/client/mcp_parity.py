@@ -293,6 +293,7 @@ def _compare_text(where, e, a, semantic):
 
 def check(servers, exp_dir, semantic, only=None, http_only=False):
     failures = 0
+    deviations = 0
 
     def report(label, problems):
         nonlocal failures
@@ -326,6 +327,14 @@ def check(servers, exp_dir, semantic, only=None, http_only=False):
             report(f"case {cid}", ["no expected output recorded"])
             continue
         case = data["case"]
+        if case.get("parity_deviation"):
+            problems = compare_case(json.loads(exp_file.read_text())["response"], data["response"], semantic)
+            if problems:
+                deviations += 1
+                print(f"dev  case {cid}: {case['parity_deviation']}")
+            else:
+                print(f"ok   case {cid} (marked as a deviation but matches the reference)")
+            continue
         tool = case.get("tool", "query_data_collections")
         expected_published = _tool_names(json.loads((exp_dir / "tools" / f"{case['server']}.json").read_text()))
         # An expected error only matches an error from the same tool, not "tool not found".
@@ -335,7 +344,8 @@ def check(servers, exp_dir, semantic, only=None, http_only=False):
         report(f"case {cid}", compare_case(json.loads(exp_file.read_text())["response"], data["response"], semantic))
 
     total = len(cases) + (0 if only else len(tools) + len(exp_http))
-    print(f"\n{total - failures}/{total} passed")
+    note = f", {deviations} documented deviation(s)" if deviations else ""
+    print(f"\n{total - failures - deviations}/{total} passed{note}")
     return 1 if failures else 0
 
 

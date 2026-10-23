@@ -7,17 +7,21 @@ module RorMcp
     # "pk", and "relation__field" paths through belongs_to associations, which
     # add LEFT JOINs. Every column is reachable, not only `fields`
     # (django-mcp-server behaviour; `:fixed` semantics will narrow this in M6).
+    # Computed fields of a published collection resolve too, also through joins.
     class Fields
-      # A resolved path: the model field, the Arel attribute on its (aliased)
-      # table, and whether NULL is possible (nullable column or join).
-      Resolved = Struct.new(:field, :model, :attribute, :nullable, keyword_init: true)
+      # A resolved path: the model field, the expression to select or compare
+      # (an Arel attribute on its possibly aliased table, or computed SQL), the
+      # type that reads its values, and whether NULL is possible.
+      Resolved = Struct.new(:field, :model, :attribute, :type, :nullable, keyword_init: true)
 
       JOIN_ALIAS_PREFIX = "ror_mcp_"
 
       attr_reader :model
 
-      def initialize(model)
+      # `computed`: model → { name => Collection::Computed } of the collection publishing it.
+      def initialize(model, computed: ->(_model) { {} })
         @model = model
+        @computed = computed
         @joins = {} # "customer__parent" => Arel join node, in the order paths were first used
         @fields = Hash.new { |cache, klass| cache[klass] = index(Schema.model_fields(klass)) }
       end
@@ -42,8 +46,15 @@ module RorMcp
           model = field.reflection.klass
         end
 
-        field = parts.last == "pk" ? primary_key(model) : field_of(model, parts.last)
-        Resolved.new(field: field, model: model, attribute: table[field.attname], nullable: nullable || field.column.null)
+        name = parts.last
+        if (computed = @computed.call(model)[name])
+          return Resolved.new(field: computed, model: model, attribute: computed.expression(table, model.connection),
+                              type: computed.database_type, nullable: true)
+        end
+
+        field = name == "pk" ? primary_key(model) : field_of(model, name)
+        Resolved.new(field: field, model: model, attribute: table[field.attname],
+                     type: database_type(model, field.attname), nullable: nullable || field.column.null)
       end
 
       def attribute(path)
@@ -73,6 +84,12 @@ module RorMcp
         find(model, name) || raise(unknown(model, name))
       end
 
+      # The column's own type: an enum attribute would return its keys, Django returns stored values.
+      def database_type(model, column)
+        type = model.type_for_attribute(column)
+        type.is_a?(ActiveRecord::Enum::EnumType) ? type.subtype : type
+      end
+
       # LEFT OUTER JOIN of a belongs_to target under an alias per path, so chains
       # and self-references (category → parent category) get distinct tables.
       def join(path, parent_table, reflection)
@@ -86,7 +103,7 @@ module RorMcp
       end
 
       def unknown(model, name)
-        names = Schema.model_fields(model).flat_map { |f| [f.name, f.attname] }
+        names = Schema.model_fields(model).flat_map { |f| [f.name, f.attname] } + @computed.call(model).keys
         names += model.reflect_on_all_associations.reject(&:belongs_to?).map { |r| r.name.to_s }
         QueryError.new("Cannot resolve keyword '#{name}' into field. Choices are: #{names.uniq.sort.join(', ')}")
       end
