@@ -1,0 +1,26 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "unsupported stage → error",
+    "id": "unsupported-stage",
+    "pipeline": [
+      {
+        "$unwind": "$items"
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 62,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Unsupported stage {'$unwind': '$items'} : please review pipeline syntax constraints",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

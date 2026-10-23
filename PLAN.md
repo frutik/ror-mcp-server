@@ -20,6 +20,12 @@ custom tools, bearer auth), a Rails app can publish with ror-mcp-server in
 about the same amount of code. The same pipelines then return the same results
 against the same data (§7 parity suite).
 
+**The reference Django app is the specification.** `spec/parity/django_app`
+runs django-mcp-server (from the `django-mcp-server/` submodule) on a small shop
+schema. `spec/dummy` is the Rails app with the same schema, data and MCP
+publication. Each milestone is done when the Rails app gives the reference
+app's recorded answers to the shared corpus (§7).
+
 **Out of scope for v1:** OAuth, MCP resources/prompts, server→client
 notifications, SSE streaming, `$unwind`/`$addFields`, has_many `$lookup`,
 wrapping controllers as tools.
@@ -32,6 +38,12 @@ Read from the **0.5.7** source (`mcp_server/`: `apps.py`, `djangomcp.py` 785
 lines, `query_tool.py` 718 lines, `views.py`, `urls.py`; ≈1.6k lines in
 total). It's a thin layer over the official Python MCP SDK (`FastMCP` +
 `StreamableHTTPSessionManager`) and does six things.
+
+> **Baseline actually run:** the `django-mcp-server/` submodule
+> (`gts360/django-mcp-server`, commit `0599c7d` = v0.5.6 + 16 commits; there is
+> no `v0.5.7` tag) with `mcp==1.30.0` (`mcp` 2.x removed `mcp.server.FastMCP`),
+> Django 5.2, DRF 3.18. Everything below was confirmed by running the reference
+> app. §1A.7 lists what running it showed beyond the source reading.
 
 ### 1. Boot and registration (`apps.py`, `djangomcp.init`, `query_tool.init`)
 
@@ -132,6 +144,34 @@ Semantics that the port has to reproduce exactly. Several of them are surprising
 | (none) | No `$project` → `queryset.values()`: **all concrete columns of the base model, including ones not in `fields`**, plus `get_queryset()` annotations, with FKs as `<name>_id`. Lookup data appears only through `$project`. |
 | Limits | **No default limit and no maximum.** No statement timeout, and no read-only enforcement other than the absence of write paths. |
 | Output | DRF renderer → one `TextContent` (or an embedded resource if `output_as_resource`). The PK comes out as `id`; `_id` exists only inside pipelines. An empty result returns `[]` unrendered. |
+
+### 7. Found by running the reference app
+
+The parity corpus (`spec/parity/pipelines/corpus.json`) pinned these. The
+source reading above missed them or left them implicit. `:parity` mode must
+reproduce them:
+
+- **Description**: the `$jsonSchema` is printed as a Python `repr` (single
+  quotes, `True`/`None`) inside a ```` ```json ```` fence, not as JSON. The
+  "Full text search is supported on the following fields" list joins a Python
+  `set`, so its order is arbitrary (compared order-insensitively). `BigAutoField`
+  PKs are `bsonType: "int"`. A FK whose exact target class isn't published on the
+  same server (e.g. only a proxy of it is) is dropped from the schema.
+- **`$match`**: `$and` / `$or` / `$nor` return early, so other keys in the same
+  object are silently ignored.
+- **`$sort`**: `alias.field` isn't translated, so sorting on a lookup alias fails.
+- **`$group`**: with `_id: "$f"` the key comes out under the field's own name
+  (`{"status": …}`), not `_id`. Alias paths nest (`{"p": {"category": 2}}`).
+  `$sum: 1` on a model without an `id` column fails (`Cannot resolve keyword 'id'`).
+- **Numbers**: query results render decimals as JSON floats (`499.9`), and
+  aggregates carry SQLite float noise (`1016.16333333333`). DRF serializers in
+  tool output render decimals as strings (`"1398.00"`).
+- **CSV**: columns are sorted alphabetically, JSON columns are flattened
+  (`metadata.channel`), and datetimes are written `2024-11-26 12:23:00+00:00`.
+- **Custom tools** (FastMCP conversion): a `dict` return is JSON with indent 2,
+  and a `list` return becomes one text content per element. An unknown tool, a
+  missing argument or an exception all give `isError: true`, not a JSON-RPC error.
+- **HTTP**: `notifications/*` → 202. DELETE → 200 with a non-JSON body.
 
 ---
 
@@ -247,7 +287,8 @@ The examples use a neutral sales domain (`Order`, `Customer`, `Product`).
 RorMcp.configure do |c|
   c.default_server name: "myapp-catalog", instructions: "…"
   c.server :sales,   name: "myapp-sales",   instructions: "…"
-  c.server :support, name: "myapp-support", instructions: "…", stateless: true
+  c.server :support, name: "myapp-support", instructions: "…", stateless: true,
+           authenticate: ->(request) { … }  # per-server override; Django sets auth per mounted view
 
   c.authenticate do |request|              # → context or nil (401)
     key = ApiKey.check_token(request.authorization.to_s.delete_prefix("Bearer "))
@@ -396,10 +437,17 @@ ror-mcp-server/
     instrumentation.rb      # ActiveSupport::Notifications "query.ror_mcp", "tool.ror_mcp"
   lib/generators/ror_mcp/{install,collection,toolset}/
   lib/tasks/ror_mcp.rake    # describe, check
+  django-mcp-server/        # git submodule: the library being ported (reference source)
   spec/
-    dummy/                  # Rails app: Customer, Order, LineItem, Product, Category (+ STI, non-id PK, JSON column)
-    parity/django_app/      # minimal Django project with the same schema + django-mcp-server 0.5.7
-    parity/pipelines/       # shared pipeline corpus + expected outputs
+    dummy/                  # Rails app under test: same schema/data as the reference app;
+                            #   app/mcp mirrors shop/mcp.py in the RorMcp DSL (dormant until the gem loads)
+    parity/
+      django_app/           # reference Django app: shop models + mcp.py (two servers, tools, CSV, resource, auth)
+      fixtures/data.json    # shared rows, seeded into both apps
+      pipelines/corpus.json # tools/call corpus, each case tagged with the behaviour it pins
+      expected/django/      # golden output recorded from the reference app (http, tools/list, cases)
+      client/               # mcp_parity.py (record|check), sdk_smoke.py, compare_dbs.py
+      bin/                  # django-server (:8765), rails-server (:3765)
     pipeline/  schema/  endpoint/
   docs/  README.md  CHANGELOG.md  ror-mcp-server.gemspec
 ```
@@ -422,12 +470,21 @@ resolve, budget).
 ## 7. Testing strategy
 
 - **Unit**: compiler stage by stage, with SQL snapshot assertions.
-- **Parity suite**: a minimal Django reference app (`spec/parity/django_app`)
-  running django-mcp-server 0.5.7, and the Rails dummy app, share one schema
-  and one fixture set. A corpus of ~50 pipelines covers every stage, operator
-  and quirk in §1A.6. Each pipeline runs on both, and in `:parity` mode the
-  JSON must be identical. This is the parity contract. The same corpus in
-  `:fixed` mode has its own expected outputs.
+- **Parity suite** (built; see `spec/parity/README.md`): the reference Django
+  app (`spec/parity/django_app`, django-mcp-server from the submodule) and the
+  Rails dummy app (`spec/dummy`) share one schema and one fixture
+  (`compare_dbs.py` checks that both DBs hold identical rows). The protocol-level
+  client `mcp_parity.py` talks raw Streamable HTTP/JSON-RPC to an endpoint.
+  `record` stores the reference app's answers in `expected/django/`, and `check
+  --base-url <rails>` diffs the Rails app against them. It covers the HTTP/session
+  rules (§1A.2), `tools/list` of both servers (names, descriptions, input
+  schemas) and 107 `tools/call` cases covering every stage, operator and quirk
+  in §1A.6–7, plus custom tools, CSV and embedded-resource output. In `:parity`
+  mode the content must be byte-identical. Where the reference returns an error,
+  the port only has to return an error. This is the parity contract. The
+  golden files are committed, so CI only needs to run the Rails side;
+  re-recording needs Python. `:fixed` mode gets its own expected directory.
+  `sdk_smoke.py` runs the same endpoints through the official MCP Python SDK client.
 - **Pitfall regression suite**: one spec per row of §3, written as the Django
   failure scenario and asserting the gem behaves correctly.
 - **Endpoint**: initialize / tools/list / tools/call over Streamable HTTP, 401
@@ -443,7 +500,7 @@ resolve, budget).
 
 | # | Deliverable | Done when |
 |---|---|---|
-| M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed |
+| M0 | Repo, gemspec, CI matrix, dummy app, Django reference app, spike on `mcp` gem transport | Spike answers `initialize` from a Rack app; transport API confirmed. **Done:** reference app, golden recordings, parity client, Rails dummy app with matching schema/data. **Open:** gemspec, CI, transport spike |
 | M1 | `Server`, `Endpoint`, auth hook, session stores, `get_server_instructions` | 401 without a key; `initialize` returns 200 + `Mcp-Session-Id`; an MCP client lists the tools |
 | M2 | `Collection` DSL, registry, schema, `query_data_collections` with `$match $sort $skip $limit $project` | First parity pipelines pass |
 | M3 | `$lookup`, references, thin join targets, multiple servers | §3 rows for name clashes, class-name registry, proxy/STI refs and `_id` mangling green |
@@ -501,11 +558,11 @@ parity-suite test, since reading code isn't running it.
 | A11 ✅ | Supported stages are `$lookup $match $sort $skip $limit $project $search $group`; `$match` ops `$eq $ne $gt $gte $lt $lte $in $nin $regex $text`, `$and $or $nor`, plus `extra_filters` as extended ops | `PIPELINE_DSL_SPEC`, `_parse_match` | — |
 | A12 ✅ | `DjangoMCP(name, instructions, stateless)` exists; sessions are Django sessions; the SDK runs stateless with `json_response=True` | `djangomcp.py` `DjangoMCP.__init__`, `session_manager`, `handle_django_request` | — |
 | A13 ⚠️ | ~~Results rename the PK to `_id`~~ Results are plain `.values()` rows: PK is `id`; `_id` only exists inside pipelines | `_QueryExecutor.query`. §1A.6 and §5 corrected | — |
-| A14 ✅ / ❓ | `$lookup` only records an alias; `prefix = localField.replace("_id", "")` (✅ source). That `get_field` accepts the attname so `author_id` works as `localField` (❓, believed from Django's `_forward_fields_map`) | Parity test with both forms and with a mid-word `_id` field | Adjust the §1B row and the parity expectations |
+| A14 ✅ | `$lookup` only records an alias; `prefix = localField.replace("_id", "")`; `get_field` accepts the attname, so `customer_id` works as `localField`, while `billing_identity` is mangled to `billingentity` and fails | Run: corpus cases `lookup-local-column-name`, `lookup-id-mangling` | — |
 | A15 ✅ | `$sum: 1` / `$count: 1` compile to `Count("id")` | `$group` branch of `apply_json_mango_query` | — |
 | A16 ✅ | Only many-to-one `$lookup` (`local_field.many_to_one` check) | `_validate_lookup` | — |
-| A17 ✅ | `$lookup` paths bypass the target toolset's `get_queryset()` and `fields`; with no `$project` all base-model columns are returned | Lookups become ORM `prefix__field` paths on the base queryset; `values()` without args | Then the fixed-mode rows in §1B are unneeded; keep for safety anyway |
-| A18 ❓ M5 | Renderers beyond JSON (e.g. CSV) work through `DJANGO_MCP_OUTPUT_RENDERER_CLASSES` in practice | Parity app with a CSV renderer | Ship JSON only in v1 |
+| A17 ✅ (run) | `$lookup` paths bypass the target toolset's `get_queryset()` and `fields`; with no `$project` all base-model columns are returned | Lookups become ORM `prefix__field` paths on the base queryset; `values()` without args | Then the fixed-mode rows in §1B are unneeded; keep for safety anyway |
+| A18 ✅ | Renderers beyond JSON (e.g. CSV) work through `DJANGO_MCP_OUTPUT_RENDERER_CLASSES` in practice | Run: `analytics-csv*` cases (CSV quirks in §1A.7) | — |
 | A19 ❓ M2 | Keeping the `query_data_collections` description format verbatim (preamble + DSL spec + `$jsonSchema` + instructions) is worth it, because client prompts are tuned to it | Compare client behaviour with the verbatim vs a cleaner description on the dummy app | Free to redesign the description |
 | A20 ✅ | Tool parameters are named `collection` and `search_pipeline` | `QueryTool._add_tools_to` | — |
 
@@ -520,7 +577,7 @@ parity-suite test, since reading code isn't running it.
 | A25 ❓ M3 | A target collection's `scope(context)` can be applied as a join condition (fixed mode) | Spike: `scope.where_clause` merged into the join `ON`, or a subquery join | Use `INNER JOIN (scope SQL) AS alias`; document the cost |
 | A26 ❓ M2 | `Rails.autoloaders.main.eager_load_dir` (Zeitwerk ≥ 2.6) works in a railtie for `app/mcp` in dev with reloading | Spike in dummy app; edit a collection, reload | Explicit `RorMcp.register` calls or a `to_prepare` hook |
 | A27 ❓ M3 | `reflect_on_association` + STI/subclass checks resolve references the way §3 promises | Specs with STI models and `class_name:` associations | Require explicit `reference … to:` |
-| A28 ❓ M2 | `defined_enums` and column comments give useful schema descriptions | Column comments exist on PG/MySQL, not on SQLite | Fall back to a `describe :field, "…"` DSL |
+| A28 ❓ M2 | `defined_enums` and column comments give useful schema descriptions | Column comments exist on PG/MySQL, not on SQLite (the dummy app's migration sets them; SQLite drops them, so `help_text` parity on SQLite needs another source) | Fall back to a `describe :field, "…"` DSL |
 | A29 ❓ M3 | `$regex` can be supported on all three adapters | SQLite has no built-in `REGEXP`; needs a registered function | SQLite: `$regex` unsupported with a clear error |
 | A30 ❓ M2 | `Rails.cache` is a valid shared session store | Only if the app uses Redis/Memcached; `memory_store` and `file_store` are per-process | Document it, and raise at boot when `session_store = :cache` with a non-shared cache in production |
 | A31 ❓ M1 | Multi-process Puma / several hosts break `:memory` sessions | Known for any per-process store | — (only changes the documented default) |
@@ -529,10 +586,10 @@ parity-suite test, since reading code isn't running it.
 
 | # | Assumption | How to check | If wrong |
 |---|---|---|---|
-| A32 ❓ M0 | A minimal Django project with django-mcp-server 0.5.7 can run in the gem's CI next to the Rails dummy app on the same database | CI spike: Python + Ruby in one job, shared Postgres service | Generate expected outputs offline and commit them as fixtures |
-| A33 ❓ M2 | Django and Ruby results can be compared deterministically | Pipelines without `$sort` have undefined order; float/decimal/date encodings differ | Corpus uses sorted pipelines only; normalise numbers/dates before diffing |
+| A32 ⚠️ | ~~Django and Rails share one database in CI~~ Each app has its own SQLite DB seeded from `spec/parity/fixtures/data.json`; golden output is recorded once and committed, so CI runs only the Rails side | `compare_dbs.py` proves both DBs hold the same rows | — (Postgres variant still to add for the matrix) |
+| A33 ✅ | Django results can be recorded deterministically | Corpus sorts wherever order matters; `PYTHONHASHSEED=0`; Django re-checked against its own recording after a restart: 120/120 | Encodings are part of the contract (byte compare); `--semantic` exists for JSON-equal output |
 | A34 ❓ M6 | The "wide model hides every collection" failure comes from a client-side truncation limit on tool descriptions, and 25k chars is under it | Measure with Claude Code and other clients on the dummy app, growing the description until collections disappear | Tune the `description_budget` default |
-| A35 ❓ M7 | An MCP client can run headless in CI for the smoke test | Try Claude Code CLI and the MCP Inspector CLI in a clean container | Use an SDK-based MCP client (Ruby or Python) instead |
+| A35 ✅ | An MCP client can run headless in CI for the smoke test | `spec/parity/client/sdk_smoke.py` (official Python SDK client) passes against the reference app | — |
 | A36 ❓ M0 | Target clients send configured headers on every request, so static bearer auth is enough | Check Claude Code, Claude Desktop, MCP Inspector configs | Add OAuth (out of scope for v1) |
 
 ### 10.5 Product and naming

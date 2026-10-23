@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: exclusion-only $project → all columns",
+    "id": "project-only-zero",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 1
+      },
+      {
+        "$project": {
+          "status": 0
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 52,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"number\":\"ORD-1001\",\"customer_id\":2,\"billing_identity_id\":null,\"status\":\"cancelled\",\"total\":499.9,\"placed_at\":\"2024-11-26T12:23:00Z\",\"metadata\":{\"channel\":\"web\",\"coupon\":null}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

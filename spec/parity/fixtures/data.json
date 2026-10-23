@@ -1,0 +1,588 @@
+{
+ "_comment": "Shared parity fixture: loaded by the Django reference app (manage.py load_parity_data) and the Rails dummy app (bin/rails db:seed). Tables in insertion order; keys are column names.",
+ "categories": [
+  {
+   "id": 1,
+   "name": "Electronics",
+   "slug": "electronics",
+   "parent_id": null
+  },
+  {
+   "id": 2,
+   "name": "Laptops",
+   "slug": "laptops",
+   "parent_id": 1
+  },
+  {
+   "id": 3,
+   "name": "Phones",
+   "slug": "phones",
+   "parent_id": 1
+  },
+  {
+   "id": 4,
+   "name": "Home & Garden",
+   "slug": "home-garden",
+   "parent_id": null
+  },
+  {
+   "id": 5,
+   "name": "Kitchen",
+   "slug": "kitchen",
+   "parent_id": 4
+  },
+  {
+   "id": 6,
+   "name": "Garden tools",
+   "slug": "garden-tools",
+   "parent_id": 4
+  }
+ ],
+ "customers": [
+  {
+   "id": 1,
+   "name": "Anna de Vries",
+   "email": "anna1@example.com",
+   "country": "NL",
+   "active": true,
+   "signed_up_on": "2023-02-21",
+   "notes": null
+  },
+  {
+   "id": 2,
+   "name": "Bram Peeters",
+   "email": "bram2@example.com",
+   "country": "BE",
+   "active": true,
+   "signed_up_on": "2023-03-30",
+   "notes": null
+  },
+  {
+   "id": 3,
+   "name": "Clara Müller",
+   "email": "clara3@example.com",
+   "country": "DE",
+   "active": true,
+   "signed_up_on": "2023-05-06",
+   "notes": "Note for customer 3"
+  },
+  {
+   "id": 4,
+   "name": "Daan Jansen",
+   "email": "daan4@example.com",
+   "country": "NL",
+   "active": false,
+   "signed_up_on": "2023-06-12",
+   "notes": null
+  },
+  {
+   "id": 5,
+   "name": "Emma Claes",
+   "email": "emma5@example.com",
+   "country": "BE",
+   "active": true,
+   "signed_up_on": "2023-07-19",
+   "notes": null
+  },
+  {
+   "id": 6,
+   "name": "Felix Schmidt",
+   "email": "felix6@example.com",
+   "country": "DE",
+   "active": true,
+   "signed_up_on": "2023-08-25",
+   "notes": "Note for customer 6"
+  },
+  {
+   "id": 7,
+   "name": "Gijs Bakker",
+   "email": "gijs7@example.com",
+   "country": "NL",
+   "active": false,
+   "signed_up_on": "2023-10-01",
+   "notes": null
+  },
+  {
+   "id": 8,
+   "name": "Hanna Wouters",
+   "email": "hanna8@example.com",
+   "country": "BE",
+   "active": true,
+   "signed_up_on": "2023-11-07",
+   "notes": null
+  }
+ ],
+ "products": [
+  {
+   "sku": "LAP-001",
+   "name": "ThinkBook 14 laptop",
+   "description": "14 inch business laptop, 16GB RAM",
+   "price": "899.00",
+   "category_id": 2,
+   "in_stock": true,
+   "specs": {
+    "ram_gb": 16,
+    "color": "grey"
+   }
+  },
+  {
+   "sku": "LAP-002",
+   "name": "Gaming laptop Pro",
+   "description": "17 inch gaming laptop with RTX graphics",
+   "price": "1799.99",
+   "category_id": 2,
+   "in_stock": true,
+   "specs": {
+    "ram_gb": 32
+   }
+  },
+  {
+   "sku": "LAP-003",
+   "name": "Budget laptop",
+   "description": "Entry level laptop",
+   "price": "349.50",
+   "category_id": 2,
+   "in_stock": false,
+   "specs": null
+  },
+  {
+   "sku": "PHN-001",
+   "name": "Pixel phone",
+   "description": "Android phone, 128GB",
+   "price": "699.00",
+   "category_id": 3,
+   "in_stock": true,
+   "specs": {
+    "storage_gb": 128
+   }
+  },
+  {
+   "sku": "PHN-002",
+   "name": "Rugged phone",
+   "description": "Shockproof outdoor phone",
+   "price": "249.95",
+   "category_id": 3,
+   "in_stock": true,
+   "specs": null
+  },
+  {
+   "sku": "KIT-001",
+   "name": "Café espresso machine",
+   "description": "Espresso machine with milk frother",
+   "price": "429.00",
+   "category_id": 5,
+   "in_stock": true,
+   "specs": {
+    "bar": 15
+   }
+  },
+  {
+   "sku": "KIT-002",
+   "name": "Chef knife",
+   "description": "Japanese steel chef knife",
+   "price": "89.90",
+   "category_id": 5,
+   "in_stock": true,
+   "specs": {
+    "length_cm": 21
+   }
+  },
+  {
+   "sku": "KIT-003",
+   "name": "Kettle",
+   "description": "Electric kettle 1.7L",
+   "price": "39.99",
+   "category_id": 5,
+   "in_stock": false,
+   "specs": {}
+  },
+  {
+   "sku": "GRD-001",
+   "name": "Garden hose 25m",
+   "description": "Flexible garden hose",
+   "price": "29.95",
+   "category_id": 6,
+   "in_stock": true,
+   "specs": null
+  },
+  {
+   "sku": "GRD-002",
+   "name": "Electric lawn mower",
+   "description": "Cordless lawn mower",
+   "price": "319.00",
+   "category_id": 6,
+   "in_stock": true,
+   "specs": {
+    "battery": "36V"
+   }
+  }
+ ],
+ "orders": [
+  {
+   "id": 1,
+   "number": "ORD-1001",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "cancelled",
+   "total": "499.90",
+   "placed_at": "2024-11-26T12:23:00Z",
+   "metadata": {
+    "channel": "web",
+    "coupon": null
+   }
+  },
+  {
+   "id": 2,
+   "number": "ORD-1002",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "shipped",
+   "total": "2386.90",
+   "placed_at": "2024-12-19T17:53:00Z",
+   "metadata": null
+  },
+  {
+   "id": 3,
+   "number": "ORD-1003",
+   "customer_id": 1,
+   "billing_identity_id": null,
+   "status": "paid",
+   "total": "6549.00",
+   "placed_at": "2025-01-11T22:10:00Z",
+   "metadata": {
+    "channel": "web",
+    "coupon": null
+   }
+  },
+  {
+   "id": 4,
+   "number": "ORD-1004",
+   "customer_id": 3,
+   "billing_identity_id": 5,
+   "status": "pending",
+   "total": "2866.60",
+   "placed_at": "2025-02-03T10:20:00Z",
+   "metadata": null
+  },
+  {
+   "id": 5,
+   "number": "ORD-1005",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "cancelled",
+   "total": "4883.00",
+   "placed_at": "2025-02-26T17:22:00Z",
+   "metadata": {
+    "channel": "app",
+    "coupon": null
+   }
+  },
+  {
+   "id": 6,
+   "number": "ORD-1006",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "shipped",
+   "total": "3187.84",
+   "placed_at": "2025-03-21T19:29:00Z",
+   "metadata": null
+  },
+  {
+   "id": 7,
+   "number": "ORD-1007",
+   "customer_id": 5,
+   "billing_identity_id": null,
+   "status": "paid",
+   "total": "699.00",
+   "placed_at": "2025-04-13T15:32:00Z",
+   "metadata": {
+    "channel": "app",
+    "coupon": null
+   }
+  },
+  {
+   "id": 8,
+   "number": "ORD-1008",
+   "customer_id": 6,
+   "billing_identity_id": 3,
+   "status": "pending",
+   "total": "1287.00",
+   "placed_at": "2025-05-06T12:57:00Z",
+   "metadata": null
+  },
+  {
+   "id": 9,
+   "number": "ORD-1009",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "cancelled",
+   "total": "2366.70",
+   "placed_at": "2025-05-29T19:59:00Z",
+   "metadata": {
+    "channel": "web",
+    "coupon": null
+   }
+  },
+  {
+   "id": 10,
+   "number": "ORD-1010",
+   "customer_id": 6,
+   "billing_identity_id": null,
+   "status": "shipped",
+   "total": "699.00",
+   "placed_at": "2025-06-21T21:35:00Z",
+   "metadata": null
+  },
+  {
+   "id": 11,
+   "number": "ORD-1011",
+   "customer_id": 7,
+   "billing_identity_id": null,
+   "status": "paid",
+   "total": "4556.98",
+   "placed_at": "2025-07-14T12:56:00Z",
+   "metadata": {
+    "channel": "app",
+    "coupon": null
+   }
+  },
+  {
+   "id": 12,
+   "number": "ORD-1012",
+   "customer_id": 7,
+   "billing_identity_id": 4,
+   "status": "pending",
+   "total": "2676.88",
+   "placed_at": "2025-08-06T20:52:00Z",
+   "metadata": null
+  },
+  {
+   "id": 13,
+   "number": "ORD-1013",
+   "customer_id": 7,
+   "billing_identity_id": null,
+   "status": "cancelled",
+   "total": "1517.80",
+   "placed_at": "2025-08-29T11:03:00Z",
+   "metadata": {
+    "channel": "web",
+    "coupon": null
+   }
+  },
+  {
+   "id": 14,
+   "number": "ORD-1014",
+   "customer_id": 2,
+   "billing_identity_id": null,
+   "status": "pending",
+   "total": "1398.00",
+   "placed_at": "2025-09-21T18:19:00Z",
+   "metadata": null
+  }
+ ],
+ "line_items": [
+  {
+   "id": 1,
+   "order_id": 1,
+   "product_id": "PHN-002",
+   "quantity": 2,
+   "unit_price": "249.95"
+  },
+  {
+   "id": 2,
+   "order_id": 2,
+   "product_id": "KIT-002",
+   "quantity": 1,
+   "unit_price": "89.90"
+  },
+  {
+   "id": 3,
+   "order_id": 2,
+   "product_id": "LAP-001",
+   "quantity": 1,
+   "unit_price": "899.00"
+  },
+  {
+   "id": 4,
+   "order_id": 2,
+   "product_id": "PHN-001",
+   "quantity": 2,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 5,
+   "order_id": 3,
+   "product_id": "PHN-001",
+   "quantity": 4,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 6,
+   "order_id": 3,
+   "product_id": "PHN-001",
+   "quantity": 4,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 7,
+   "order_id": 3,
+   "product_id": "GRD-002",
+   "quantity": 3,
+   "unit_price": "319.00"
+  },
+  {
+   "id": 8,
+   "order_id": 4,
+   "product_id": "KIT-002",
+   "quantity": 3,
+   "unit_price": "89.90"
+  },
+  {
+   "id": 9,
+   "order_id": 4,
+   "product_id": "PHN-002",
+   "quantity": 2,
+   "unit_price": "249.95"
+  },
+  {
+   "id": 10,
+   "order_id": 4,
+   "product_id": "PHN-001",
+   "quantity": 3,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 11,
+   "order_id": 5,
+   "product_id": "KIT-001",
+   "quantity": 3,
+   "unit_price": "429.00"
+  },
+  {
+   "id": 12,
+   "order_id": 5,
+   "product_id": "LAP-001",
+   "quantity": 4,
+   "unit_price": "899.00"
+  },
+  {
+   "id": 13,
+   "order_id": 6,
+   "product_id": "PHN-002",
+   "quantity": 3,
+   "unit_price": "249.95"
+  },
+  {
+   "id": 14,
+   "order_id": 6,
+   "product_id": "GRD-002",
+   "quantity": 2,
+   "unit_price": "319.00"
+  },
+  {
+   "id": 15,
+   "order_id": 6,
+   "product_id": "LAP-002",
+   "quantity": 1,
+   "unit_price": "1799.99"
+  },
+  {
+   "id": 16,
+   "order_id": 7,
+   "product_id": "PHN-001",
+   "quantity": 1,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 17,
+   "order_id": 8,
+   "product_id": "KIT-001",
+   "quantity": 3,
+   "unit_price": "429.00"
+  },
+  {
+   "id": 18,
+   "order_id": 9,
+   "product_id": "LAP-003",
+   "quantity": 2,
+   "unit_price": "349.50"
+  },
+  {
+   "id": 19,
+   "order_id": 9,
+   "product_id": "LAP-003",
+   "quantity": 4,
+   "unit_price": "349.50"
+  },
+  {
+   "id": 20,
+   "order_id": 9,
+   "product_id": "KIT-002",
+   "quantity": 3,
+   "unit_price": "89.90"
+  },
+  {
+   "id": 21,
+   "order_id": 10,
+   "product_id": "PHN-001",
+   "quantity": 1,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 22,
+   "order_id": 11,
+   "product_id": "LAP-002",
+   "quantity": 2,
+   "unit_price": "1799.99"
+  },
+  {
+   "id": 23,
+   "order_id": 11,
+   "product_id": "GRD-002",
+   "quantity": 3,
+   "unit_price": "319.00"
+  },
+  {
+   "id": 24,
+   "order_id": 12,
+   "product_id": "KIT-003",
+   "quantity": 2,
+   "unit_price": "39.99"
+  },
+  {
+   "id": 25,
+   "order_id": 12,
+   "product_id": "PHN-002",
+   "quantity": 2,
+   "unit_price": "249.95"
+  },
+  {
+   "id": 26,
+   "order_id": 12,
+   "product_id": "PHN-001",
+   "quantity": 3,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 27,
+   "order_id": 13,
+   "product_id": "PHN-001",
+   "quantity": 2,
+   "unit_price": "699.00"
+  },
+  {
+   "id": 28,
+   "order_id": 13,
+   "product_id": "GRD-001",
+   "quantity": 4,
+   "unit_price": "29.95"
+  },
+  {
+   "id": 29,
+   "order_id": 14,
+   "product_id": "LAP-003",
+   "quantity": 4,
+   "unit_price": "349.50"
+  }
+ ]
+}

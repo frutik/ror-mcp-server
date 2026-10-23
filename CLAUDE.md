@@ -4,11 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Pre-M0: the repo holds only `PLAN.md` (the full design) and a stub README. There is no gemspec, Gemfile, code or test suite yet, so there are no build/test commands. Add them here once M0 lands (gemspec, CI matrix, dummy app). `.venv/` is a local Python virtualenv (intended for the Django reference app used by the parity suite); it is not part of the gem.
+M0 in progress: the gem itself (gemspec, `lib/`) doesn't exist yet. What does exist is the parity harness, which defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
+
+## Commands
+
+```sh
+# Python side (reference app + clients); .venv is git-ignored
+python -m venv .venv && .venv/bin/pip install -r spec/parity/requirements.txt
+spec/parity/bin/django-server            # reset DB from fixture, serve reference app on :8765
+
+# Rails side: needs Ruby >= 3.2 (system Ruby is 2.6; Homebrew's is at /opt/homebrew/opt/ruby/bin)
+PATH=/opt/homebrew/opt/ruby/bin:$PATH spec/parity/bin/rails-server   # reset DB, serve spec/dummy on :3765
+
+# Verification
+.venv/bin/python spec/parity/client/compare_dbs.py                                       # both DBs identical
+.venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765  # Rails vs golden
+.venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765 --only group-null,lookup-basic
+.venv/bin/python spec/parity/client/sdk_smoke.py --base-url http://127.0.0.1:3765         # official MCP SDK client
+.venv/bin/python spec/parity/client/mcp_parity.py record   # re-record golden from :8765, then review the diff
+```
+
+`spec/dummy` installs gems into `vendor/bundle` (the Homebrew gem dir isn't writable from the sandbox).
 
 **`PLAN.md` is the source of truth.** Read the relevant section before implementing anything; when a decision changes, update `PLAN.md` along with the code.
 
-The Python library being ported is vendored as a git submodule at `django-mcp-server/` (fork `gts360/django-mcp-server`; run `git submodule update --init` after cloning). Check behaviour against its source (`mcp_server/djangomcp.py`, `mcp_server/query_tool.py`) instead of guessing. Note: PLAN.md targets 0.5.7, but the submodule is currently at `v0.5.6` + 16 commits (no `v0.5.7` tag exists there), so confirm which commit is the parity baseline before relying on version-specific behaviour.
+The Python library being ported is vendored as a git submodule at `django-mcp-server/` (fork `gts360/django-mcp-server`; run `git submodule update --init` after cloning). Check behaviour against its source (`mcp_server/djangomcp.py`, `mcp_server/query_tool.py`) instead of guessing. The parity baseline is the submodule's pinned commit (`0599c7d`, v0.5.6 + 16 commits; no `v0.5.7` tag exists) with `mcp==1.30.0`. `mcp` 2.x breaks django-mcp-server.
 
 ## What this is
 
@@ -29,10 +49,13 @@ Key pieces and how they relate:
 - **Tool description text** (preamble, DSL spec wording, per-collection layout, tool names) must match django-mcp-server so existing client prompts transfer.
 - Output rows match Django's `QuerySet.values()` + DRF `JSONRenderer` encoding (PK as `id`, FKs as `<name>_id`, DRF date/decimal/UUID formats).
 
-## Testing (planned — PLAN §7)
+## Parity harness (PLAN §7, `spec/parity/README.md`)
 
-- Parity suite: a Django reference app (`spec/parity/django_app`, django-mcp-server 0.5.7) and the Rails dummy app (`spec/dummy`) share one schema and fixtures; a shared pipeline corpus must yield identical JSON in `:parity` mode, with separate expected outputs for `:fixed`.
-- One regression spec per "problem in practice" row of PLAN §3.
-- Matrix: Postgres (primary), MySQL, SQLite × Rails 7.1/7.2/8.x × Ruby 3.2–3.4.
+- The reference app is the spec. `spec/parity/django_app/shop/mcp.py` and `spec/dummy/app/mcp/**` (+ `config/initializers/ror_mcp.rb`) are mirrors: change both together, keep table/column names identical, and re-record the golden files.
+- `spec/dummy/app/mcp` uses the planned `RorMcp` DSL and is dormant (autoload-ignored, routes not mounted) until `RorMcp` is defined. Wiring the gem in means uncommenting the `ror-mcp-server` line in `spec/dummy/Gemfile`.
+- `expected/django/` is generated output. Never hand-edit it; re-record from a fresh `bin/django-server`. Recordings depend on `PYTHONHASHSEED=0`.
+- Collection names follow Django (`lineitem`, `vipcustomer`), so the Rails mirror pins them with `collection_name`.
+- Quirks the port must reproduce beyond the source reading are listed in PLAN §1A.7.
+- Still planned: one regression spec per PLAN §3 row, and the Postgres/MySQL × Rails × Ruby matrix (the parity DBs are SQLite today).
 
 Milestones and open decisions are in PLAN §8–§10; don't assume a §9 decision has been made unless the code or PLAN says so.

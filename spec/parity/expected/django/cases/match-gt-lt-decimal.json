@@ -1,0 +1,42 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$gt/$lt on a decimal",
+    "id": "match-gt-lt-decimal",
+    "pipeline": [
+      {
+        "$match": {
+          "total": {
+            "$gt": 500,
+            "$lt": 2000
+          }
+        }
+      },
+      {
+        "$sort": {
+          "total": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "total": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 8,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1007\",\"total\":699.0},{\"number\":\"ORD-1010\",\"total\":699.0},{\"number\":\"ORD-1008\",\"total\":1287.0},{\"number\":\"ORD-1014\",\"total\":1398.0},{\"number\":\"ORD-1013\",\"total\":1517.8}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

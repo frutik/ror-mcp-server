@@ -1,0 +1,54 @@
+{
+  "case": {
+    "collection": "lineitem",
+    "covers": "chained lookups through an alias",
+    "id": "lookup-chain",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "o",
+          "foreignField": "_id",
+          "from": "order",
+          "localField": "order"
+        }
+      },
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "o.customer"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 4
+      },
+      {
+        "$project": {
+          "customer": "$c.name",
+          "id": 1,
+          "order_no": "$o.number"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 74,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"order_no\":\"ORD-1001\",\"customer\":\"Bram Peeters\"},{\"id\":2,\"order_no\":\"ORD-1002\",\"customer\":\"Bram Peeters\"},{\"id\":3,\"order_no\":\"ORD-1002\",\"customer\":\"Bram Peeters\"},{\"id\":4,\"order_no\":\"ORD-1002\",\"customer\":\"Bram Peeters\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

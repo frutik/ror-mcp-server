@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Rebuild the reference app's SQLite DB from the shared fixture and serve it.
+#   spec/parity/bin/django-server [port]   (default 8765)
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PY="${PYTHON:-$ROOT/.venv/bin/python}"
+cd "$ROOT/spec/parity/django_app"
+# Fixed hash seed: the "Full text search is supported on ..." list is built from a Python set.
+export PYTHONHASHSEED=0
+rm -f db.sqlite3
+"$PY" manage.py migrate -v0
+"$PY" manage.py load_parity_data
+exec "$PY" manage.py runserver "127.0.0.1:${1:-8765}" --noreload

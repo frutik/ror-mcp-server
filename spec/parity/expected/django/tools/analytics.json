@@ -1,0 +1,91 @@
+{
+  "id": 2,
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "description": "Return MCP server instructions (if any). Always call first.",
+        "inputSchema": {
+          "properties": {},
+          "title": "_get_server_instructionsArguments",
+          "type": "object"
+        },
+        "name": "get_server_instructions"
+      },
+      {
+        "description": "Total number of line items.",
+        "inputSchema": {
+          "properties": {},
+          "title": "line_item_countArguments",
+          "type": "object"
+        },
+        "name": "line_item_count",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "line_item_countOutput",
+          "type": "object"
+        }
+      },
+      {
+        "description": "Order count and revenue per status.",
+        "inputSchema": {
+          "properties": {},
+          "title": "revenue_by_statusArguments",
+          "type": "object"
+        },
+        "name": "revenue_by_status",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Result",
+              "type": "array"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "revenue_by_statusOutput",
+          "type": "object"
+        }
+      },
+      {
+        "description": "\nUse this tool to query data available in the server. \nThe `collection` parameter specifies the collection to query and the `search_pipeline` parameter is \na list of stage of a MongoDB aggregation pipeline with restricted syntax.\n\n## MongoDB aggregation pipeline syntax supported\n\nThe syntax to query is a subset of MangoDB aggregation pipeline JSON with support of following stages : \n\n1. $lookup: Joins another collection :.\n  - \"from\" must refer to a model name listed in ref in the schema (if defined).\n  - \"localField\" must be a field path on the base collection or a previous $lookup alias.\n  - \"foreignField\" must be \"_id\"\n  - \"as\" defines an alias used in subsequent $match and $lookup stages as a prefix (e.g., alias.field).\n2. $match: Filter documents using comparison and logical operators.\n  - Supports: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $regex in addition to $text for collections that support full text search.\n  - Field references can include lookup aliases via dot notation, e.g. \"user.name\"\n3. $sort: Sorts the result. Keys must map to model fields.\n4. $limit: Truncates the result set to the specified number of items.\n5. $project: Selects specific fields for results. Only \"flat\" objects are supported.\n   Value is either a number/boolean to include/exclude the field or a string starting in format \n   \"$<lookupAlias>.<field>\" to project a field from a previous $lookup stage.  \n6. $search: For collection that support full-text search. Limited to {\"text\":{\"query\":\"<keyword>\"}}.\n7. $group: Groups the result set by a field and applies aggregations.\n     - It must be the **final** stage in the pipeline.\n     - You cannot have a $project stage in the pipeline.\n     - `_id` can be null for global aggregation or a $<field> reference of a single field or lookup field or an object mapping \"keys\" to \"$<field>\" refs.\n     - Supported accumulator operators: `$sum`, `$avg`, `$min`, `$max` and `$count`\n\nAll other stages NOT SUPPORTED : $addFields, $set, $unset, $unwind ...\n. \n\n## Available collections to query\n\n### 'order' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'One row per order placed by a customer.', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'number': {'bsonType': 'string'}, 'status': {'bsonType': 'string', 'enum': ['pending', 'paid', 'shipped', 'cancelled'], 'description': \"Choices: 'pending' = Pending, 'paid' = Paid, 'shipped' = Shipped, 'cancelled' = Cancelled\"}, 'total': {'bsonType': 'double'}, 'placed_at': {'bsonType': 'date'}}, 'required': ['number', 'status', 'total', 'placed_at']}}\n```\n\nFull text search is supported on the following fields: status, number.\n### 'vipcustomer' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'Customers flagged as VIP (proxy model: same table, published on the analytics server).', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'name': {'bsonType': 'string'}, 'country': {'bsonType': 'string', 'enum': ['NL', 'BE', 'DE'], 'description': \"Choices: 'NL' = Netherlands, 'BE' = Belgium, 'DE' = Germany\"}}, 'required': ['name', 'country']}}\n```\n\nFull text search is supported on the following fields: name, country.",
+        "inputSchema": {
+          "properties": {
+            "collection": {
+              "title": "Collection",
+              "type": "string"
+            },
+            "search_pipeline": {
+              "default": [],
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Search Pipeline",
+              "type": "array"
+            }
+          },
+          "required": [
+            "collection"
+          ],
+          "title": "_dumb_queryArguments",
+          "type": "object"
+        },
+        "name": "query_data_collections"
+      }
+    ]
+  }
+}

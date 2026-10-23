@@ -1,0 +1,134 @@
+{
+  "id": 2,
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "description": "Return MCP server instructions (if any). Always call first.",
+        "inputSchema": {
+          "properties": {},
+          "title": "_get_server_instructionsArguments",
+          "type": "object"
+        },
+        "name": "get_server_instructions"
+      },
+      {
+        "description": "Add two integers.",
+        "inputSchema": {
+          "properties": {
+            "a": {
+              "title": "A",
+              "type": "integer"
+            },
+            "b": {
+              "title": "B",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "a",
+            "b"
+          ],
+          "title": "addArguments",
+          "type": "object"
+        },
+        "name": "add",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "addOutput",
+          "type": "object"
+        }
+      },
+      {
+        "description": "Number of orders placed by one customer.",
+        "inputSchema": {
+          "properties": {
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "customer_id"
+          ],
+          "title": "customer_order_countArguments",
+          "type": "object"
+        },
+        "name": "customer_order_count"
+      },
+      {
+        "description": "Always fails; exercises the tool error path.",
+        "inputSchema": {
+          "properties": {
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          "required": [
+            "reason"
+          ],
+          "title": "explodeArguments",
+          "type": "object"
+        },
+        "name": "explode",
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "title": "Result",
+              "type": "string"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "title": "explodeOutput",
+          "type": "object"
+        }
+      },
+      {
+        "description": "The order with the highest id, serialized with a DRF serializer.",
+        "inputSchema": {
+          "properties": {},
+          "title": "latest_orderArguments",
+          "type": "object"
+        },
+        "name": "latest_order"
+      },
+      {
+        "description": "\nUse this tool to query data available in the server. \nThe `collection` parameter specifies the collection to query and the `search_pipeline` parameter is \na list of stage of a MongoDB aggregation pipeline with restricted syntax.\n\n## MongoDB aggregation pipeline syntax supported\n\nThe syntax to query is a subset of MangoDB aggregation pipeline JSON with support of following stages : \n\n1. $lookup: Joins another collection :.\n  - \"from\" must refer to a model name listed in ref in the schema (if defined).\n  - \"localField\" must be a field path on the base collection or a previous $lookup alias.\n  - \"foreignField\" must be \"_id\"\n  - \"as\" defines an alias used in subsequent $match and $lookup stages as a prefix (e.g., alias.field).\n2. $match: Filter documents using comparison and logical operators.\n  - Supports: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $regex in addition to $text for collections that support full text search.\n  - Field references can include lookup aliases via dot notation, e.g. \"user.name\"\n3. $sort: Sorts the result. Keys must map to model fields.\n4. $limit: Truncates the result set to the specified number of items.\n5. $project: Selects specific fields for results. Only \"flat\" objects are supported.\n   Value is either a number/boolean to include/exclude the field or a string starting in format \n   \"$<lookupAlias>.<field>\" to project a field from a previous $lookup stage.  \n6. $search: For collection that support full-text search. Limited to {\"text\":{\"query\":\"<keyword>\"}}.\n7. $group: Groups the result set by a field and applies aggregations.\n     - It must be the **final** stage in the pipeline.\n     - You cannot have a $project stage in the pipeline.\n     - `_id` can be null for global aggregation or a $<field> reference of a single field or lookup field or an object mapping \"keys\" to \"$<field>\" refs.\n     - Supported accumulator operators: `$sum`, `$avg`, `$min`, `$max` and `$count`\n\nAll other stages NOT SUPPORTED : $addFields, $set, $unset, $unwind ...\n. \n\n## Available collections to query\n\n### 'category' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'A node of the product category tree.', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'name': {'bsonType': 'string'}, 'slug': {'bsonType': 'string'}, 'parent': {'bsonType': 'objectId', 'description': 'Reference to Category: Parent category, null for a root', 'ref': 'Category'}}, 'required': ['name', 'slug']}}\n```\n\nFull text search is supported on the following fields: slug, name.\n### 'customer' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'A person or company that places orders.', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'name': {'bsonType': 'string'}, 'country': {'bsonType': 'string', 'enum': ['NL', 'BE', 'DE'], 'description': \"Choices: 'NL' = Netherlands, 'BE' = Belgium, 'DE' = Germany\"}, 'active': {'bsonType': 'bool'}, 'signed_up_on': {'bsonType': 'date'}}, 'required': ['name', 'country', 'active', 'signed_up_on']}}\n```\n\nFull text search is supported on the following fields: name, country.\n### 'product' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'A sellable item, identified by its SKU.', '$jsonSchema': {'bsonType': 'object', 'properties': {'sku': {'description': 'Stock keeping unit', 'bsonType': 'string'}, 'name': {'bsonType': 'string'}, 'description': {'bsonType': 'string'}, 'price': {'bsonType': 'double'}, 'category': {'bsonType': 'objectId', 'description': 'Reference to Category', 'ref': 'Category'}, 'in_stock': {'bsonType': 'bool'}, 'specs': {'bsonType': 'object', 'description': 'Free-form product attributes'}}, 'required': ['sku', 'name', 'price', 'category', 'in_stock']}}\n```\n\nFull text search is supported on the following fields: description, name.\n\nExtra instructions for this collection:\n\nPrices are in EUR. The primary key is the SKU.\n\n### 'order' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'One row per order placed by a customer.', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'number': {'bsonType': 'string'}, 'customer': {'bsonType': 'objectId', 'description': 'Reference to Customer', 'ref': 'Customer'}, 'billing_identity': {'bsonType': 'objectId', 'description': 'Reference to Customer: Customer billed for the order, if not the buyer', 'ref': 'Customer'}, 'status': {'bsonType': 'string', 'enum': ['pending', 'paid', 'shipped', 'cancelled'], 'description': \"Choices: 'pending' = Pending, 'paid' = Paid, 'shipped' = Shipped, 'cancelled' = Cancelled\"}, 'total': {'bsonType': 'double'}, 'placed_at': {'bsonType': 'date'}}, 'required': ['number', 'customer', 'status', 'total', 'placed_at']}}\n```\n\nFull text search is supported on the following fields: status, number.\n\nExtra instructions for this collection:\n\nLatest order = highest id.\n\n### 'lineitem' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'A product line within an order.', '$jsonSchema': {'bsonType': 'object', 'properties': {'id': {'description': 'Primary unique identifier for this model', 'bsonType': 'int'}, 'order': {'bsonType': 'objectId', 'description': 'Reference to Order', 'ref': 'Order'}, 'product': {'bsonType': 'objectId', 'description': 'Reference to Product', 'ref': 'Product'}, 'quantity': {'bsonType': 'int'}, 'unit_price': {'bsonType': 'double'}}, 'required': ['order', 'product', 'quantity', 'unit_price']}}\n```\n\nFull text search is not supported on this collection.",
+        "inputSchema": {
+          "properties": {
+            "collection": {
+              "title": "Collection",
+              "type": "string"
+            },
+            "search_pipeline": {
+              "default": [],
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Search Pipeline",
+              "type": "array"
+            }
+          },
+          "required": [
+            "collection"
+          ],
+          "title": "_dumb_queryArguments",
+          "type": "object"
+        },
+        "name": "query_data_collections"
+      }
+    ]
+  }
+}

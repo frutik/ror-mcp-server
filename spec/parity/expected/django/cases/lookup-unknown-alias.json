@@ -1,0 +1,28 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "unknown alias → error",
+    "id": "lookup-unknown-alias",
+    "pipeline": [
+      {
+        "$match": {
+          "x.name": "a"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 77,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Unknown lookup alias 'x', ensure it appears in the 'as' field of a previous $lookup",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

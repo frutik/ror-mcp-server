@@ -1,2 +1,4 @@
 .idea/
 .venv/
+__pycache__/
+spec/parity/django_app/db.sqlite3

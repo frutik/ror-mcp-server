@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Rebuild the Rails dummy app's SQLite DB from the shared fixture and serve it.
+#   spec/parity/bin/rails-server [port]   (default 3765)
+# Needs Ruby >= 3.2 on PATH (e.g. Homebrew: /opt/homebrew/opt/ruby/bin).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$ROOT/spec/dummy"
+bundle install --quiet
+rm -f storage/development.sqlite3
+bin/rails db:prepare db:seed
+exec bin/rails server -p "${1:-3765}" -b 127.0.0.1

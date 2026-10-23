@@ -1,0 +1,47 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$match on a lookup alias",
+    "id": "lookup-match-alias",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$match": {
+          "c.country": "BE"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "country": "$c.country",
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 64,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"country\":\"BE\"},{\"number\":\"ORD-1002\",\"country\":\"BE\"},{\"number\":\"ORD-1005\",\"country\":\"BE\"},{\"number\":\"ORD-1006\",\"country\":\"BE\"},{\"number\":\"ORD-1007\",\"country\":\"BE\"},{\"number\":\"ORD-1009\",\"country\":\"BE\"},{\"number\":\"ORD-1014\",\"country\":\"BE\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

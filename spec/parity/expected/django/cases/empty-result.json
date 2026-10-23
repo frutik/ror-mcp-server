@@ -1,0 +1,23 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: empty result returns [] unrendered (no content)",
+    "id": "empty-result",
+    "pipeline": [
+      {
+        "$match": {
+          "status": "nope"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 59,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [],
+      "isError": false
+    }
+  }
+}

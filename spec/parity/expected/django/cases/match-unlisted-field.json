@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "filter on a field outside `fields` (email) is accepted",
+    "id": "match-unlisted-field",
+    "pipeline": [
+      {
+        "$match": {
+          "email": "anna1@example.com"
+        }
+      },
+      {
+        "$project": {
+          "id": 1,
+          "name": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 25,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Anna de Vries\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

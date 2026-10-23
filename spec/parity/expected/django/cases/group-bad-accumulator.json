@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "unsupported accumulator → error",
+    "id": "group-bad-accumulator",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "x": {
+            "$push": "$number"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 89,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Unsupported aggregation operator: $push",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "quirk: any direction other than 1 sorts descending",
+    "id": "sort-zero-is-desc",
+    "pipeline": [
+      {
+        "$sort": {
+          "price": 0
+        }
+      },
+      {
+        "$project": {
+          "price": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 41,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"LAP-002\",\"price\":1799.99},{\"sku\":\"LAP-001\",\"price\":899.0},{\"sku\":\"PHN-001\",\"price\":699.0},{\"sku\":\"KIT-001\",\"price\":429.0},{\"sku\":\"LAP-003\",\"price\":349.5},{\"sku\":\"GRD-002\",\"price\":319.0},{\"sku\":\"PHN-002\",\"price\":249.95},{\"sku\":\"KIT-002\",\"price\":89.9},{\"sku\":\"KIT-003\",\"price\":39.99},{\"sku\":\"GRD-001\",\"price\":29.95}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

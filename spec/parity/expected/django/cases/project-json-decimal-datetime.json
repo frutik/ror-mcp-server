@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "JSON, decimal and datetime rendering",
+    "id": "project-json-decimal-datetime",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 3
+      },
+      {
+        "$project": {
+          "metadata": 1,
+          "number": 1,
+          "placed_at": 1,
+          "total": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 54,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"total\":499.9,\"placed_at\":\"2024-11-26T12:23:00Z\",\"metadata\":{\"channel\":\"web\",\"coupon\":null}},{\"number\":\"ORD-1002\",\"total\":2386.9,\"placed_at\":\"2024-12-19T17:53:00Z\",\"metadata\":null},{\"number\":\"ORD-1003\",\"total\":6549.0,\"placed_at\":\"2025-01-11T22:10:00Z\",\"metadata\":{\"channel\":\"web\",\"coupon\":null}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

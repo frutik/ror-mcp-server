@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$group _id null, $sum 1",
+    "id": "group-null",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          },
+          "revenue": {
+            "$sum": "$total"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 78,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":14,\"revenue\":35574.6}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

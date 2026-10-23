@@ -1,0 +1,40 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$eq",
+    "id": "match-eq",
+    "pipeline": [
+      {
+        "$match": {
+          "status": {
+            "$eq": "shipped"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 4,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1002\"},{\"number\":\"ORD-1006\"},{\"number\":\"ORD-1010\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "$gt on a date field",
+    "id": "match-date-field",
+    "pipeline": [
+      {
+        "$match": {
+          "signed_up_on": {
+            "$gt": "2023-06-01"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "signed_up_on": 1
+        }
+      },
+      {
+        "$project": {
+          "name": 1,
+          "signed_up_on": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 10,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"name\":\"Emma Claes\",\"signed_up_on\":\"2023-07-19\"},{\"name\":\"Felix Schmidt\",\"signed_up_on\":\"2023-08-25\"},{\"name\":\"Hanna Wouters\",\"signed_up_on\":\"2023-11-07\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

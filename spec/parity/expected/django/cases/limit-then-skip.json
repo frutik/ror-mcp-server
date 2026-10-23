@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$limit then $skip",
+    "id": "limit-then-skip",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 5
+      },
+      {
+        "$skip": 2
+      },
+      {
+        "$project": {
+          "id": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 46,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":3},{\"id\":4},{\"id\":5}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

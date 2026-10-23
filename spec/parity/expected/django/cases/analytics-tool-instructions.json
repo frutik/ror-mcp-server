@@ -1,0 +1,22 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "per-server instructions",
+    "id": "analytics-tool-instructions",
+    "server": "analytics",
+    "tool": "get_server_instructions"
+  },
+  "response": {
+    "id": 10,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Reporting server. Orders come back as CSV.",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

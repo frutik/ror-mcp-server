@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$limit before $group (aggregate over a sliced queryset)",
+    "id": "group-with-limit",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 5
+      },
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 86,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":5}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
