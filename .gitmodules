@@ -1,0 +1,3 @@
+[submodule "django-mcp-server"]
+	path = django-mcp-server
+	url = git@github.com:gts360/django-mcp-server.git
