@@ -1,0 +1,32 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "quirk: $sum 1 is Count('id') → fails on a model whose PK isn't id",
+    "id": "group-sum-1-non-id-pk",
+    "parity_deviation": "PLAN §1B: ror-mcp-server counts with COUNT(*) in both modes, so this succeeds",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 85,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'id' into field. Choices are: category, category_id, description, in_stock, line_items, name, price, sku, specs",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

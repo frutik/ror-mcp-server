@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$text with a non-ASCII word",
+    "id": "text-unicode",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "café"
+          }
+        }
+      },
+      {
+        "$project": {
+          "name": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 33,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"KIT-001\",\"name\":\"Café espresso machine\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

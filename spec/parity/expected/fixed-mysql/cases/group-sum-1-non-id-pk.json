@@ -1,0 +1,32 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "quirk: $sum 1 is Count('id') → fails on a model whose PK isn't id",
+    "id": "group-sum-1-non-id-pk",
+    "parity_deviation": "PLAN §1B: ror-mcp-server counts with COUNT(*) in both modes, so this succeeds",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 85,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":10}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

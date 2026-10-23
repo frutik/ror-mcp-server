@@ -3,12 +3,15 @@
 fixture = JSON.parse(File.read(Rails.root.join("../parity/fixtures/data.json")))
 tables = fixture.keys.reject { |t| t.start_with?("_") }
 
-ActiveRecord::Base.transaction do
-  conn = ActiveRecord::Base.connection
-  tables.reverse_each { |t| conn.execute("DELETE FROM #{conn.quote_table_name(t)}") }
-  tables.each do |table|
-    model = table.classify.constantize
-    model.insert_all!(fixture[table], record_timestamps: false)
+conn = ActiveRecord::Base.connection
+# MySQL checks foreign keys row by row, so a self-referencing table (categories) can't be emptied with them on.
+conn.disable_referential_integrity do
+  ActiveRecord::Base.transaction do
+    tables.reverse_each { |t| conn.execute("DELETE FROM #{conn.quote_table_name(t)}") }
+    tables.each do |table|
+      model = table.classify.constantize
+      model.insert_all!(fixture[table], record_timestamps: false)
+    end
   end
 end
 

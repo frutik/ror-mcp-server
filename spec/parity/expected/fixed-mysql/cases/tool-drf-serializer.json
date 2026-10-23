@@ -1,0 +1,22 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "drf_serialize_output (decimal as string, datetime ISO)",
+    "id": "tool-drf-serializer",
+    "server": "default",
+    "tool": "latest_order"
+  },
+  "response": {
+    "id": 95,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "{\n  \"id\": 14,\n  \"number\": \"ORD-1014\",\n  \"status\": \"pending\",\n  \"total\": \"1398.00\",\n  \"placed_at\": \"2025-09-21T18:19:00Z\",\n  \"customer\": 2\n}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

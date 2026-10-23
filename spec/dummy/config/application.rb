@@ -41,6 +41,10 @@ module Dummy
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # The schema comes from the migration on every database (jsonb on PostgreSQL), never a dump.
+    config.active_record.dump_schema_after_migration = false
+    config.active_record.schema_format = :ruby
+
     # app/mcp/**/*_tools.rb use RorMcp::Toolset, which the gem ships in M5.
     Rails.autoloaders.main.ignore(Rails.root.join("app/mcp/**/*_tools.rb")) unless defined?(RorMcp::Toolset)
   end

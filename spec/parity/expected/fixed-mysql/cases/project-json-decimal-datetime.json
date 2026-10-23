@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "JSON, decimal and datetime rendering",
+    "id": "project-json-decimal-datetime",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 3
+      },
+      {
+        "$project": {
+          "metadata": 1,
+          "number": 1,
+          "placed_at": 1,
+          "total": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 54,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'metadata' into field. Choices are: billing_identity, billing_identity_id, customer, customer_id, id, number, placed_at, status, total",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

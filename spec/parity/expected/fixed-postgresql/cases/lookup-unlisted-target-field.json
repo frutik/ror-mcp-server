@@ -1,0 +1,45 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: alias reaches fields outside the target's `fields` (email)",
+    "id": "lookup-unlisted-target-field",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "email": "$c.email",
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'email' into field. Choices are: active, country, id, name, signed_up_on",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

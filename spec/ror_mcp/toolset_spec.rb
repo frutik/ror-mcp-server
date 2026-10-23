@@ -138,8 +138,9 @@ RSpec.describe RorMcp::PyDecimal do
     expect(described_class.significant(2388.95).to_s).to eq("2388.95000000000")
   end
 
-  it "compares as a number and renders as a float in JSON" do
+  it "compares as a number from either side and renders as a float in JSON" do
     expect(described_class.scaled("499.9", 2)).to eq(BigDecimal("499.9"))
+    expect(BigDecimal("499.9")).to eq(described_class.scaled("499.9", 2))
     expect(RorMcp::Renderers::Json.render(described_class.scaled("899", 2))).to eq("899.0")
   end
 end

@@ -1,0 +1,49 @@
+{
+  "case": {
+    "collection": "lineitem",
+    "covers": "lookup into a string-PK target",
+    "id": "lookup-non-id-pk",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "p",
+          "foreignField": "_id",
+          "from": "product",
+          "localField": "product"
+        }
+      },
+      {
+        "$match": {
+          "p.category": 5
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "id": 1,
+          "name": "$p.name",
+          "price": "$p.price",
+          "sku": "$p.sku"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 75,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":2,\"sku\":\"KIT-002\",\"name\":\"Chef knife\",\"price\":89.9},{\"id\":8,\"sku\":\"KIT-002\",\"name\":\"Chef knife\",\"price\":89.9},{\"id\":11,\"sku\":\"KIT-001\",\"name\":\"Café espresso machine\",\"price\":429.0},{\"id\":17,\"sku\":\"KIT-001\",\"name\":\"Café espresso machine\",\"price\":429.0},{\"id\":20,\"sku\":\"KIT-002\",\"name\":\"Chef knife\",\"price\":89.9},{\"id\":24,\"sku\":\"KIT-003\",\"name\":\"Kettle\",\"price\":39.99}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

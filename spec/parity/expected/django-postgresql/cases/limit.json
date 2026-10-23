@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$limit",
+    "id": "limit",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 3
+      },
+      {
+        "$project": {
+          "id": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 44,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1},{\"id\":2},{\"id\":3}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

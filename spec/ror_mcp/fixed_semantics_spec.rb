@@ -100,9 +100,10 @@ RSpec.describe "fixed semantics" do
     end
 
     it "lets $sort use aliases and _id" do
-      # Order 4's customer is outside the customer scope, so c.name is NULL (sorted first by SQLite).
-      expect(rows([lookup, { "$sort" => { "c.name" => 1, "_id" => -1 } }, { "$project" => { "id" => 1 } }]).map { |r| r["id"] })
-        .to eq([4, 3, 2, 1])
+      # Order 4's customer is outside the customer scope, so c.name is NULL: ascending,
+      # PostgreSQL sorts NULLs last, SQLite and MySQL first (Django gets the same order).
+      ordered = rows([lookup, { "$sort" => { "c.name" => 1, "_id" => -1 } }, { "$project" => { "id" => 1 } }]).map { |r| r["id"] }
+      expect(ordered).to eq(ShopDb.adapter.include?("postg") ? [3, 2, 1, 4] : [4, 3, 2, 1])
     end
   end
 
@@ -151,9 +152,23 @@ RSpec.describe "fixed semantics" do
 
   describe "safety envelope" do
     it "runs queries with the database in read-only mode, then rolls back" do
-      seen = RorMcp::Envelope.read_only(ShopDb::Order) { ShopDb::Order.connection.select_value("PRAGMA query_only") }
-      expect(seen).to eq(1)
-      expect(ShopDb::Order.connection.select_value("PRAGMA query_only")).to eq(0)
+      connection = ShopDb::Order.connection
+      probe =
+        case ShopDb.adapter
+        when /sqlite/ then -> { connection.select_value("PRAGMA query_only").to_i == 1 }
+        when /postg/ then -> { connection.select_value("SHOW transaction_read_only") == "on" }
+        else -> { connection.preventing_writes? } # MySQL: Rails' guard (no read-only switch inside a transaction)
+        end
+      expect(RorMcp::Envelope.read_only(ShopDb::Order) { probe.call }).to be(true)
+      expect(probe.call).to be(false)
+    end
+
+    it "applies the statement timeout" do
+      skip "SQLite has no statement timeout" if ShopDb.adapter.include?("sqlite")
+
+      query = ShopDb.adapter.include?("postg") ? "SHOW statement_timeout" : "SELECT @@SESSION.max_execution_time"
+      seen = RorMcp::Envelope.read_only(ShopDb::Order, timeout: 2.5) { ShopDb::Order.connection.select_value(query) }
+      expect(seen.to_s).to eq(ShopDb.adapter.include?("postg") ? "2500ms" : "2500")
     end
 
     it "refuses writes from tools unless declared writes: true" do

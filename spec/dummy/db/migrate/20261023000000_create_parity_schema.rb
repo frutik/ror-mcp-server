@@ -2,6 +2,11 @@
 # so both apps load spec/parity/fixtures/data.json identically.
 # Column comments carry Django's help_text (ignored by SQLite, kept for Postgres).
 class CreateParitySchema < ActiveRecord::Migration[8.1]
+  # Django's JSONField is jsonb on PostgreSQL (keys come back reordered); json elsewhere.
+  def json_type
+    connection.adapter_name.match?(/postg/i) ? :jsonb : :json
+  end
+
   def change
     create_table :categories do |t|
       t.string :name, limit: 100, null: false
@@ -21,11 +26,12 @@ class CreateParitySchema < ActiveRecord::Migration[8.1]
     create_table :products, id: false do |t|
       t.string :sku, limit: 20, primary_key: true, comment: "Stock keeping unit"
       t.string :name, limit: 200, null: false
-      t.text :description, null: false, default: ""
+      # MySQL can't store a default on TEXT; Product declares it with the attribute API.
+      t.text :description, null: false, **(connection.adapter_name.match?(/mysql|trilogy/i) ? {} : { default: "" })
       t.decimal :price, precision: 10, scale: 2, null: false
       t.references :category, null: false, foreign_key: true
       t.boolean :in_stock, null: false, default: true
-      t.json :specs, comment: "Free-form product attributes"
+      t.column :specs, json_type, comment: "Free-form product attributes"
     end
 
     create_table :orders do |t|
@@ -36,7 +42,7 @@ class CreateParitySchema < ActiveRecord::Migration[8.1]
       t.string :status, limit: 20, null: false
       t.decimal :total, precision: 10, scale: 2, null: false
       t.datetime :placed_at, null: false
-      t.json :metadata
+      t.column :metadata, json_type
     end
 
     create_table :line_items do |t|

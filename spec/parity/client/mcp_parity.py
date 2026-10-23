@@ -252,7 +252,24 @@ def _is_error(resp):
     return "error" in resp or "_http_status" in resp or resp.get("result", {}).get("isError") is True
 
 
-def compare_case(expected, actual, semantic):
+def _unordered(text):
+    """Rows of a JSON array or CSV body, as a sorted list (order ignored)."""
+    try:
+        rows = json.loads(text)
+        if isinstance(rows, list):
+            return ["json"] + sorted(json.dumps(r, sort_keys=True) for r in rows)
+    except (TypeError, ValueError):
+        pass
+    lines = (text or "").split("\r\n")
+    return ["csv", lines[0]] + sorted(lines[1:])
+
+
+def ends_with_group(case):
+    pipeline = case.get("pipeline") or []
+    return bool(pipeline) and isinstance(pipeline[-1], dict) and "$group" in pipeline[-1]
+
+
+def compare_case(expected, actual, semantic, unordered=False):
     if _is_error(expected):
         return [] if _is_error(actual) else [f"expected an error, got {json.dumps(actual)[:300]}"]
     if _is_error(actual):
@@ -266,6 +283,9 @@ def compare_case(expected, actual, semantic):
             problems.append(f"content[{i}] type {e.get('type')} != {a.get('type')}")
             continue
         if e["type"] == "text":
+            # $group results have no defined order (PostgreSQL hash-aggregates): compare as a multiset.
+            if unordered and _unordered(e["text"]) == _unordered(a["text"]):
+                continue
             problems += _compare_text(f"content[{i}]", e["text"], a["text"], semantic)
         elif e["type"] == "resource":
             er, ar = e["resource"], a["resource"]
@@ -341,7 +361,8 @@ def check(servers, exp_dir, semantic, only=None, http_only=False):
         if tool in expected_published and tool not in published[case["server"]]:
             report(f"case {cid}", [f"tool {tool!r} is not published on the {case['server']} server"])
             continue
-        report(f"case {cid}", compare_case(json.loads(exp_file.read_text())["response"], data["response"], semantic))
+        report(f"case {cid}", compare_case(json.loads(exp_file.read_text())["response"], data["response"], semantic,
+                                           unordered=ends_with_group(case)))
 
     total = len(cases) + (0 if only else len(tools) + len(exp_http))
     note = f", {deviations} documented deviation(s)" if deviations else ""

@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "extra_filters year on a datetime",
+    "id": "extended-year",
+    "pipeline": [
+      {
+        "$match": {
+          "placed_at": {
+            "$year": 2025
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "placed_at": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 28,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1003\",\"placed_at\":\"2025-01-11T22:10:00Z\"},{\"number\":\"ORD-1004\",\"placed_at\":\"2025-02-03T10:20:00Z\"},{\"number\":\"ORD-1005\",\"placed_at\":\"2025-02-26T17:22:00Z\"},{\"number\":\"ORD-1006\",\"placed_at\":\"2025-03-21T19:29:00Z\"},{\"number\":\"ORD-1007\",\"placed_at\":\"2025-04-13T15:32:00Z\"},{\"number\":\"ORD-1008\",\"placed_at\":\"2025-05-06T12:57:00Z\"},{\"number\":\"ORD-1009\",\"placed_at\":\"2025-05-29T19:59:00Z\"},{\"number\":\"ORD-1010\",\"placed_at\":\"2025-06-21T21:35:00Z\"},{\"number\":\"ORD-1011\",\"placed_at\":\"2025-07-14T12:56:00Z\"},{\"number\":\"ORD-1012\",\"placed_at\":\"2025-08-06T20:52:00Z\"},{\"number\":\"ORD-1013\",\"placed_at\":\"2025-08-29T11:03:00Z\"},{\"number\":\"ORD-1014\",\"placed_at\":\"2025-09-21T18:19:00Z\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

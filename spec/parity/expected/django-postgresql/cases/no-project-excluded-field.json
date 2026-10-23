@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: exclude_fields (metadata) still returned; FKs as <name>_id",
+    "id": "no-project-excluded-field",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 56,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"number\":\"ORD-1001\",\"customer_id\":2,\"billing_identity_id\":null,\"status\":\"cancelled\",\"total\":499.9,\"placed_at\":\"2024-11-26T12:23:00Z\",\"metadata\":{\"coupon\":null,\"channel\":\"web\"}},{\"id\":2,\"number\":\"ORD-1002\",\"customer_id\":2,\"billing_identity_id\":null,\"status\":\"shipped\",\"total\":2386.9,\"placed_at\":\"2024-12-19T17:53:00Z\",\"metadata\":null}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "$project inclusion",
+    "id": "project-include",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "country": 1,
+          "id": 1,
+          "name": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 48,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Anna de Vries\",\"country\":\"NL\"},{\"id\":2,\"name\":\"Bram Peeters\",\"country\":\"BE\"},{\"id\":3,\"name\":\"Clara Müller\",\"country\":\"DE\"},{\"id\":5,\"name\":\"Emma Claes\",\"country\":\"BE\"},{\"id\":6,\"name\":\"Felix Schmidt\",\"country\":\"DE\"},{\"id\":8,\"name\":\"Hanna Wouters\",\"country\":\"BE\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

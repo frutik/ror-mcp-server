@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: $sort does not translate lookup aliases → error",
+    "id": "sort-on-alias",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$sort": {
+          "c.name": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 43,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'c.name' into field. Choices are: billing_identity, billing_identity_id, customer, customer_id, id, line_items, metadata, number, placed_at, status, total",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

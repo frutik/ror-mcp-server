@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: localField.replace('_id','') mangles billing_identity",
+    "id": "lookup-id-mangling",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "b",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "billing_identity"
+        }
+      },
+      {
+        "$match": {
+          "b.country": "NL"
+        }
+      },
+      {
+        "$project": {
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 73,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'billingentity' into field. Choices are: billing_identity, billing_identity_id, customer, customer_id, id, line_items, metadata, number, placed_at, status, total",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

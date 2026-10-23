@@ -1,0 +1,45 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: alias reaches fields outside the target's `fields` (email)",
+    "id": "lookup-unlisted-target-field",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "email": "$c.email",
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"email\":\"bram2@example.com\"},{\"number\":\"ORD-1002\",\"email\":\"bram2@example.com\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

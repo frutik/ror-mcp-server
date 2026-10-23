@@ -1,0 +1,28 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "unknown field → error",
+    "id": "match-unknown-field",
+    "pipeline": [
+      {
+        "$match": {
+          "nope": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 24,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Cannot resolve keyword 'nope' into field. Choices are: billing_identity, billing_identity_id, customer, customer_id, id, line_items, metadata, number, placed_at, status, total",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

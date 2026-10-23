@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$match.$text over search_fields",
+    "id": "text-single-word",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "laptop"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$project": {
+          "name": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 30,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"LAP-001\",\"name\":\"ThinkBook 14 laptop\"},{\"sku\":\"LAP-002\",\"name\":\"Gaming laptop Pro\"},{\"sku\":\"LAP-003\",\"name\":\"Budget laptop\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

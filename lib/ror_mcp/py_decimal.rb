@@ -19,7 +19,13 @@ module RorMcp
       new(decimal, scale.to_i.positive? ? "#{whole}.#{fraction.to_s.ljust(scale.to_i, '0')[0, scale.to_i]}" : whole)
     end
 
-    # An average: SQLite's float through Decimal with 15 significant digits.
+    # A value the database computed exactly (PostgreSQL / MySQL numeric): Python's str() of the Decimal.
+    def self.exact(value)
+      text = value.is_a?(BigDecimal) ? value.to_s("F") : value.to_s
+      new(BigDecimal(text), text)
+    end
+
+    # An average on SQLite: its float through Decimal with 15 significant digits.
     def self.significant(value, digits = 15)
       float = Float(value)
       return new(BigDecimal("0"), "0") if float.zero?
@@ -34,13 +40,19 @@ module RorMcp
       @text = text
     end
 
-    def to_f = @value.to_f
+    # Correctly rounded, like Python's float(Decimal).
+    def to_f = Float(@text)
     def to_s = @text
     def inspect = "#<PyDecimal #{@text}>"
     def hash = @value.hash
 
     def <=>(other)
       @value <=> (other.is_a?(PyDecimal) ? other.value : other)
+    end
+
+    # Lets numbers compare with it from either side (BigDecimal("1") == py_decimal).
+    def coerce(other)
+      [other, @value]
     end
 
     def eql?(other)

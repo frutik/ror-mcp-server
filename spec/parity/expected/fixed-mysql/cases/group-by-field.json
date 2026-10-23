@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$group by one field",
+    "id": "group-by-field",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": "$status",
+          "n": {
+            "$sum": 1
+          },
+          "revenue": {
+            "$sum": "$total"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 79,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":4,\"revenue\":9267.4,\"status\":\"cancelled\"},{\"n\":3,\"revenue\":6273.74,\"status\":\"shipped\"},{\"n\":3,\"revenue\":11804.98,\"status\":\"paid\"},{\"n\":4,\"revenue\":8228.48,\"status\":\"pending\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

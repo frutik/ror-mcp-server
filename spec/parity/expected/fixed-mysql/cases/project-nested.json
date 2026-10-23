@@ -1,0 +1,38 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "dotted output keys → nested objects",
+    "id": "project-nested",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "info.status": "$status",
+          "info.total": "$total",
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 53,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"info\":{\"status\":\"cancelled\",\"total\":499.9}},{\"number\":\"ORD-1002\",\"info\":{\"status\":\"shipped\",\"total\":2386.9}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

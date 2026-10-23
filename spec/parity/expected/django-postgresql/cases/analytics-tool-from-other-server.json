@@ -1,0 +1,25 @@
+{
+  "case": {
+    "arguments": {
+      "a": 1,
+      "b": 1
+    },
+    "covers": "tools are per server → unknown tool",
+    "id": "analytics-tool-from-other-server",
+    "server": "analytics",
+    "tool": "add"
+  },
+  "response": {
+    "id": 13,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Unknown tool: add",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

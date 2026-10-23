@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "localField not a many-to-one → error",
+    "id": "lookup-local-not-fk",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "status"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 70,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $lookup localField 'status' is not a reference (belongs_to); references can be joined, 'status' is a string",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

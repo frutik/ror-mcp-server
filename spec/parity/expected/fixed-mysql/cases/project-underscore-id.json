@@ -1,0 +1,37 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$project _id → pk",
+    "id": "project-underscore-id",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "_id": 1,
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 49,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"_id\":1,\"number\":\"ORD-1001\"},{\"_id\":2,\"number\":\"ORD-1002\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "quirk: no $project → every column (email, notes) despite `fields`; get_queryset scope applies",
+    "id": "no-project-all-columns",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 55,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Anna de Vries\",\"email\":\"anna1@example.com\",\"country\":\"NL\",\"active\":true,\"signed_up_on\":\"2023-02-21\",\"notes\":null},{\"id\":2,\"name\":\"Bram Peeters\",\"email\":\"bram2@example.com\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-03-30\",\"notes\":null},{\"id\":3,\"name\":\"Clara Müller\",\"email\":\"clara3@example.com\",\"country\":\"DE\",\"active\":true,\"signed_up_on\":\"2023-05-06\",\"notes\":\"Note for customer 3\"},{\"id\":5,\"name\":\"Emma Claes\",\"email\":\"emma5@example.com\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-07-19\",\"notes\":null},{\"id\":6,\"name\":\"Felix Schmidt\",\"email\":\"felix6@example.com\",\"country\":\"DE\",\"active\":true,\"signed_up_on\":\"2023-08-25\",\"notes\":\"Note for customer 6\"},{\"id\":8,\"name\":\"Hanna Wouters\",\"email\":\"hanna8@example.com\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-11-07\",\"notes\":null}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

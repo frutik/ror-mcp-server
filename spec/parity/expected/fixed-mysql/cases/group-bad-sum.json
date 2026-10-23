@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$sum with a literal other than 1 → error",
+    "id": "group-bad-sum",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "x": {
+            "$sum": 2
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 90,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $sum only supports 1 or field references.",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

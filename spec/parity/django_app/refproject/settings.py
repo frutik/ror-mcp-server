@@ -1,6 +1,7 @@
 """Settings for the django-mcp-server reference app used by the parity suite."""
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,12 +24,22 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "refproject.urls"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("PARITY_DJANGO_DB", BASE_DIR / "db.sqlite3"),
+# SQLite by default; PARITY_DATABASE_URL=postgres://user@host:port/name or mysql://… for the matrix.
+_url = urlparse(os.environ.get("PARITY_DATABASE_URL", ""))
+if _url.scheme:
+    DATABASES = {"default": {
+        "ENGINE": {"postgres": "django.db.backends.postgresql", "postgresql": "django.db.backends.postgresql",
+                   "mysql": "django.db.backends.mysql"}[_url.scheme],
+        "NAME": _url.path.lstrip("/"), "USER": _url.username or "", "PASSWORD": _url.password or "",
+        "HOST": _url.hostname or "", "PORT": str(_url.port or ""),
+    }}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.environ.get("PARITY_DJANGO_DB", BASE_DIR / "db.sqlite3"),
+        }
     }
-}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True

@@ -1,0 +1,42 @@
+{
+  "case": {
+    "collection": "category",
+    "covers": "self-referencing FK",
+    "id": "lookup-self-reference",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "parent_cat",
+          "foreignField": "_id",
+          "from": "category",
+          "localField": "parent"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "name": 1,
+          "parent_name": "$parent_cat.name"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 76,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"name\":\"Electronics\",\"parent_name\":null},{\"name\":\"Laptops\",\"parent_name\":\"Electronics\"},{\"name\":\"Phones\",\"parent_name\":\"Electronics\"},{\"name\":\"Home & Garden\",\"parent_name\":null},{\"name\":\"Kitchen\",\"parent_name\":\"Home & Garden\"},{\"name\":\"Garden tools\",\"parent_name\":\"Home & Garden\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

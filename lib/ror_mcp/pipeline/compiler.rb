@@ -399,11 +399,12 @@ module RorMcp
       def run_group(paths, aggregates)
         relation = @relation
         if @high
-          # :parity: aggregating a sliced queryset — Django wraps it in a subquery; $skip is ignored.
-          key = @model.arel_table[@model.primary_key]
-          inner = @relation.except(:select).select(key).limit(@high)
+          # :parity: aggregating a sliced queryset — Django reads it from a derived table
+          # (FROM (SELECT … LIMIT n)); $skip is ignored. MySQL refuses LIMIT inside IN (…).
+          inner = @relation.except(:select).select(@model.arel_table[Arel.star]).limit(@high)
           inner = inner.joins(*@fields.joins) unless @fields.joins.empty?
-          relation = @model.unscoped.where(key.in(inner.arel))
+          relation = @model.unscoped.from(inner, @model.table_name)
+          @fields.reset_joins
         end
 
         resolved = paths.map { |path| @fields.resolve(path) }
@@ -420,9 +421,9 @@ module RorMcp
         end
       end
 
-      # Values as Django's SQLite converters return them: decimal sums and
-      # extremes rounded to the column's scale, decimal averages to 15
-      # significant digits, other averages as floats.
+      # Values as Django returns them: decimal sums and extremes at the column's
+      # scale; decimal averages to 15 significant digits on SQLite (Django's
+      # converter), exact elsewhere; other averages as floats.
       def cast_aggregate(caster, value)
         return value.to_i if caster == :integer && !value.nil?
         return value if value.nil? || caster == :integer
@@ -430,7 +431,10 @@ module RorMcp
         kind, reference = caster
         column = reference.field.respond_to?(:column) ? reference.field.column : nil
         if column&.type == :decimal
-          return PyDecimal.significant(value) if kind == :average
+          if kind == :average
+            sqlite = @model.connection.adapter_name.match?(/sqlite/i)
+            return sqlite ? PyDecimal.significant(value) : PyDecimal.exact(value)
+          end
 
           return PyDecimal.scaled(value, column.scale)
         end

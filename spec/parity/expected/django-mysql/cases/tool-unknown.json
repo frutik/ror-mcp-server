@@ -1,0 +1,22 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "unknown tool → isError",
+    "id": "tool-unknown",
+    "server": "default",
+    "tool": "does_not_exist"
+  },
+  "response": {
+    "id": 98,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Unknown tool: does_not_exist",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

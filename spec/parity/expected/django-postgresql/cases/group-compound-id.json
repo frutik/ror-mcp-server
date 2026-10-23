@@ -1,0 +1,42 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "compound _id with a lookup alias → nested _id",
+    "id": "group-compound-id",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$group": {
+          "_id": {
+            "country": "$c.country",
+            "status": "$status"
+          },
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 83,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"n\":3,\"_id\":{\"status\":\"cancelled\",\"country\":\"BE\"}},{\"n\":1,\"_id\":{\"status\":\"cancelled\",\"country\":\"NL\"}},{\"n\":1,\"_id\":{\"status\":\"shipped\",\"country\":\"DE\"}},{\"n\":1,\"_id\":{\"status\":\"pending\",\"country\":\"NL\"}},{\"n\":1,\"_id\":{\"status\":\"paid\",\"country\":\"BE\"}},{\"n\":1,\"_id\":{\"status\":\"pending\",\"country\":\"BE\"}},{\"n\":2,\"_id\":{\"status\":\"pending\",\"country\":\"DE\"}},{\"n\":2,\"_id\":{\"status\":\"shipped\",\"country\":\"BE\"}},{\"n\":2,\"_id\":{\"status\":\"paid\",\"country\":\"NL\"}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

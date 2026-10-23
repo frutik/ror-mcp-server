@@ -147,6 +147,16 @@ Semantics that the port has to reproduce exactly. Several of them are surprising
 
 ### 7. Found by running the reference app
 
+**Per database** (Django itself, recorded on SQLite, PostgreSQL 14 and MySQL 8.4):
+JSON columns come back with keys reordered on PostgreSQL (`jsonb`) and MySQL
+(`JSON`); decimal averages are exact on PostgreSQL/MySQL but rounded to 15
+significant digits on SQLite (Django's converter); `$group` row order without
+`$sort` is the database's (hash order on PostgreSQL); NULLs sort last ascending
+on PostgreSQL, first elsewhere. Each database has its own golden set
+(`expected/django`, `django-postgresql`, `django-mysql`, and `fixed*`), and the
+parity client compares trailing-`$group` results as a multiset.
+
+
 The parity corpus (`spec/parity/pipelines/corpus.json`) pinned these. The
 source reading above missed them or left them implicit. `:parity` mode must
 reproduce them:
@@ -577,14 +587,14 @@ parity-suite test, since reading code isn't running it.
 | # | Assumption | How to check | If wrong |
 |---|---|---|---|
 | A21 ❓ M0 | Rails 7.1 is the right floor: composite PKs (7.1), `connected_to(role:/shard:)` (6.1), `while_preventing_writes` (6.0) | Rails changelogs; the first consumer's Rails version (Decision 5) | Lower floor → drop composite PK support or gate it |
-| A22 ✅ (SQLite) / ❓ (PG, MySQL) | `while_preventing_writes` lets `SET TRANSACTION READ ONLY` / `SET LOCAL statement_timeout` through | Spike on PG and MySQL; read AR `write_query?` / `READ_QUERY` per adapter | Issue those statements before entering the guard |
+| A22 ✅ | `while_preventing_writes` lets `SET TRANSACTION READ ONLY` / `SET LOCAL statement_timeout` through | Spike on PG and MySQL; read AR `write_query?` / `READ_QUERY` per adapter | Issue those statements before entering the guard. Verified: SQLite `PRAGMA query_only`, PostgreSQL `SET TRANSACTION READ ONLY` + `SET LOCAL statement_timeout`, MySQL `max_execution_time` (MySQL can't make a started transaction read-only; Rails' guard covers it) |
 | A23 ✅ | `while_preventing_writes` alone is not a sufficient read-only guarantee (it inspects SQL text only), so a DB-level `READ ONLY` transaction is needed too | A `computed sql:` calling a side-effecting function | — (already planned; also recommend a read-only DB role in docs) |
 | A24 ✅ (fallback) | Arel can build `belongs_to` joins with **client-chosen table aliases** (`as`) and chain them (`a1.a2.field`), including self-joins | Built with internal aliases per path (`ror_mcp_<path>`), the plan's fallback: client aliases map to Django-style `a__b` paths anyway | — |
 | A25 ✅ (subquery) | A target collection's `scope(context)` can be applied as a join condition (fixed mode) | Spike: `scope.where_clause` merged into the join `ON`, or a subquery join | Use `INNER JOIN (scope SQL) AS alias`; document the cost |
 | A26 ✅ (boot) / ❓ (reload) | `Rails.autoloaders.main.eager_load_dir` (Zeitwerk ≥ 2.6) works in a railtie for `app/mcp` in dev with reloading | Spike in dummy app; edit a collection, reload | Explicit `RorMcp.register` calls or a `to_prepare` hook. The engine's `to_prepare` clears the registry and eager-loads `app/mcp`; works at boot in the dummy app. Reload not exercised yet |
 | A27 ✅ | `reflect_on_association` + STI/subclass checks resolve references the way §3 promises | Specs with STI models and `class_name:` associations | Require explicit `reference … to:`. `:parity` keeps Django's exact-class check (done); subclass-aware resolution is `:fixed` behaviour, M6 |
 | A28 ✅ | `defined_enums` and column comments give useful schema descriptions | Enums give `enum` values. SQLite drops comments, so the DSL has `description` (model docstring), `describe :field, "…"` (help_text) and `choice_labels` (choice labels; default: humanized enum key). Column comments are used when present | — |
-| A29 ✅ (SQLite) / ❓ (PG, MySQL) | `$regex` can be supported on all three adapters | SQLite: the executor registers a `regexp()` function per connection (as Django does), so `col REGEXP pat` works. PG `~` / MySQL `REGEXP BINARY` still to add | SQLite: `$regex` unsupported with a clear error |
+| A29 ✅ | `$regex` can be supported on all three adapters | SQLite: registered `regexp()` (Ruby Regexp); PostgreSQL `~`/`~*`; MySQL `REGEXP_LIKE(…, 'c'/'i')`, as Django's backends do. Verified on all three | — |
 | A30 ❓ M2 | `Rails.cache` is a valid shared session store | Only if the app uses Redis/Memcached; `memory_store` and `file_store` are per-process | Document it, and raise at boot when `session_store = :cache` with a non-shared cache in production |
 | A31 ❓ M1 | Multi-process Puma / several hosts break `:memory` sessions | Known for any per-process store | — (only changes the documented default) |
 

@@ -19,6 +19,26 @@ bin/django-server         reset DB from the fixture, serve on :8765
 bin/rails-server          reset DB from the fixture, serve on :3765
 ```
 
+## Databases
+
+Every suite runs on SQLite (default), PostgreSQL and MySQL. Django's answers
+differ slightly per database (JSON key order, exact vs rounded decimal averages,
+NULL and group ordering), so each has its own golden set:
+
+| Database | `:parity` vs | `:fixed` vs |
+|---|---|---|
+| SQLite | `expected/django` | `expected/fixed` |
+| PostgreSQL | `expected/django-postgresql` | `expected/fixed-postgresql` |
+| MySQL | `expected/django-mysql` | `expected/fixed-mysql` |
+
+```sh
+# Django reference app on another database (empty database; mysqlclient / psycopg in the venv)
+PARITY_DATABASE_URL=postgres://postgres@127.0.0.1:5433/parity_django spec/parity/bin/django-server
+# Rails dummy app (Rails' DATABASE_URL); the gem specs use RORMCP_TEST_DATABASE_URL
+DATABASE_URL=trilogy://root@127.0.0.1:3307/ror_mcp_dummy RORMCP_SEMANTICS=fixed spec/parity/bin/rails-server
+RORMCP_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5433/ror_mcp_test bundle exec rspec
+```
+
 ## Running
 
 ```sh

@@ -1,0 +1,33 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "csv of a $group with nested _id",
+    "id": "analytics-csv-group",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": {
+            "s": "$status"
+          },
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 5,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "_id.s,n\r\ncancelled,4\r\npending,4\r\npaid,3\r\nshipped,3\r\n",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

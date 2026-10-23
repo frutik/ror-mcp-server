@@ -151,14 +151,15 @@ RSpec.describe RorMcp::Pipeline::Compiler do
     it "puts a single key under the field's own name, after the accumulators" do
       result = rows([{ "$match" => { "status" => { "$ne" => "cancelled" } } },
                      { "$group" => { "_id" => "$status", "n" => { "$count" => 1 }, "top" => { "$max" => "$total" } } }])
-      expect(result).to eq([{ "n" => 2, "top" => BigDecimal("6549"), "status" => "paid" },
-                            { "n" => 1, "top" => BigDecimal("120"), "status" => "pending" }])
+      # Without $sort the group order is the database's (PostgreSQL hash-aggregates).
+      expect(result).to contain_exactly({ "n" => 2, "top" => BigDecimal("6549"), "status" => "paid" },
+                                        { "n" => 1, "top" => BigDecimal("120"), "status" => "pending" })
     end
 
     it "nests object keys under _id and follows lookup aliases" do
       result = rows([{ "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "_id", "as" => "c" } },
                      { "$group" => { "_id" => { "country" => "$c.country" }, "n" => { "$sum" => 1 } } }], orders_with_customers)
-      expect(result).to eq([{ "n" => 2, "_id" => { "country" => "BE" } }, { "n" => 2, "_id" => { "country" => "NL" } }])
+      expect(result).to contain_exactly({ "n" => 2, "_id" => { "country" => "BE" } }, { "n" => 2, "_id" => { "country" => "NL" } })
     end
 
     it "averages decimals to 15 significant digits, like Django on SQLite" do

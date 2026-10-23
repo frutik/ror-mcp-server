@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$regex (case-sensitive)",
+    "id": "match-regex",
+    "pipeline": [
+      {
+        "$match": {
+          "name": {
+            "$regex": "^[A-G]"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$project": {
+          "name": 1,
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 13,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"GRD-001\",\"name\":\"Garden hose 25m\"},{\"sku\":\"GRD-002\",\"name\":\"Electric lawn mower\"},{\"sku\":\"KIT-001\",\"name\":\"Café espresso machine\"},{\"sku\":\"KIT-002\",\"name\":\"Chef knife\"},{\"sku\":\"LAP-002\",\"name\":\"Gaming laptop Pro\"},{\"sku\":\"LAP-003\",\"name\":\"Budget laptop\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

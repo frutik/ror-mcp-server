@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$group not last → error",
+    "id": "group-not-last",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "n": {
+            "$sum": 1
+          }
+        }
+      },
+      {
+        "$limit": 1
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 87,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $group must be the last stage in the pipeline.: please review pipeline syntax constriants.",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

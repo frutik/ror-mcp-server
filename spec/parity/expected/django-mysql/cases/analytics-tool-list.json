@@ -1,0 +1,58 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "custom tool returning a list",
+    "id": "analytics-tool-list",
+    "server": "analytics",
+    "tool": "revenue_by_status"
+  },
+  "response": {
+    "id": 11,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "{\n  \"status\": \"cancelled\",\n  \"orders\": 4,\n  \"revenue\": \"9267.40\"\n}",
+          "type": "text"
+        },
+        {
+          "text": "{\n  \"status\": \"paid\",\n  \"orders\": 3,\n  \"revenue\": \"11804.98\"\n}",
+          "type": "text"
+        },
+        {
+          "text": "{\n  \"status\": \"pending\",\n  \"orders\": 4,\n  \"revenue\": \"8228.48\"\n}",
+          "type": "text"
+        },
+        {
+          "text": "{\n  \"status\": \"shipped\",\n  \"orders\": 3,\n  \"revenue\": \"6273.74\"\n}",
+          "type": "text"
+        }
+      ],
+      "isError": false,
+      "structuredContent": {
+        "result": [
+          {
+            "orders": 4,
+            "revenue": "9267.40",
+            "status": "cancelled"
+          },
+          {
+            "orders": 3,
+            "revenue": "11804.98",
+            "status": "paid"
+          },
+          {
+            "orders": 4,
+            "revenue": "8228.48",
+            "status": "pending"
+          },
+          {
+            "orders": 3,
+            "revenue": "6273.74",
+            "status": "shipped"
+          }
+        ]
+      }
+    }
+  }
+}

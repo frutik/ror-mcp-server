@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$search with path",
+    "id": "search-path",
+    "pipeline": [
+      {
+        "$search": {
+          "text": {
+            "path": "name",
+            "query": "knife"
+          }
+        }
+      },
+      {
+        "$project": {
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 37,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"KIT-002\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

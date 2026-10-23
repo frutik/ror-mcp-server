@@ -1,0 +1,37 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$avg/$min/$max",
+    "id": "group-avg-min-max",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": "$category",
+          "avg_price": {
+            "$avg": "$price"
+          },
+          "max_price": {
+            "$max": "$price"
+          },
+          "min_price": {
+            "$min": "$price"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 81,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"avg_price\":1016.163333,\"min_price\":349.5,\"max_price\":1799.99,\"category\":2},{\"avg_price\":474.475,\"min_price\":249.95,\"max_price\":699.0,\"category\":3},{\"avg_price\":186.296667,\"min_price\":39.99,\"max_price\":429.0,\"category\":5},{\"avg_price\":174.475,\"min_price\":29.95,\"max_price\":319.0,\"category\":6}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "case": {
+    "collection": "invoice",
+    "covers": "unknown collection → error listing collections",
+    "id": "unknown-collection",
+    "pipeline": [],
+    "server": "default"
+  },
+  "response": {
+    "id": 61,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: No such collection, available collections: category, customer, lineitem, order, product",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

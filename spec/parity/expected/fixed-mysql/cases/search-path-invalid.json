@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$search path outside search_fields → error",
+    "id": "search-path-invalid",
+    "pipeline": [
+      {
+        "$search": {
+          "text": {
+            "path": "sku",
+            "query": "LAP"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 38,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $search path contains fields that are not allowed for search",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

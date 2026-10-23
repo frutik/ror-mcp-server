@@ -1,0 +1,34 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$count with a field reference (non-null count)",
+    "id": "group-count-field",
+    "pipeline": [
+      {
+        "$group": {
+          "_id": null,
+          "billed": {
+            "$count": "$billing_identity"
+          },
+          "orders": {
+            "$count": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 82,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"orders\":14,\"billed\":3}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

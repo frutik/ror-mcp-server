@@ -4,6 +4,9 @@ source "https://rubygems.org"
 gem "rails", "~> 8.1.4"
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
+# PostgreSQL / MySQL for the parity matrix (DATABASE_URL).
+gem "pg", ">= 1.5"
+gem "trilogy", ">= 2.9"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 

@@ -1,0 +1,24 @@
+{
+  "case": {
+    "arguments": {
+      "a": 1
+    },
+    "covers": "missing required argument → isError",
+    "id": "tool-missing-arg",
+    "server": "default",
+    "tool": "add"
+  },
+  "response": {
+    "id": 97,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Missing required arguments: b",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

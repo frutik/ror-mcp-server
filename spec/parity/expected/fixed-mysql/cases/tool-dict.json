@@ -1,0 +1,24 @@
+{
+  "case": {
+    "arguments": {
+      "customer_id": 2
+    },
+    "covers": "custom tool returning a dict",
+    "id": "tool-dict",
+    "server": "default",
+    "tool": "customer_order_count"
+  },
+  "response": {
+    "id": 94,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "{\n  \"customer_id\": 2,\n  \"orders\": 6\n}",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

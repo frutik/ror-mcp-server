@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "csv without $project (all columns incl. JSON)",
+    "id": "analytics-csv-all-columns",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      }
+    ],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 4,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "customer_id,id,number,placed_at,status,total\r\n2,1,ORD-1001,2024-11-26 12:23:00+00:00,cancelled,499.90\r\n2,2,ORD-1002,2024-12-19 17:53:00+00:00,shipped,2386.90\r\n",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

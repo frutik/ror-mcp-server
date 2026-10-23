@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "string PK, JSON column, decimal",
+    "id": "no-project-non-id-pk",
+    "pipeline": [
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$limit": 3
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 57,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"GRD-001\",\"name\":\"Garden hose 25m\",\"description\":\"Flexible garden hose\",\"price\":29.95,\"category_id\":6,\"in_stock\":true,\"specs\":null},{\"sku\":\"GRD-002\",\"name\":\"Electric lawn mower\",\"description\":\"Cordless lawn mower\",\"price\":319.0,\"category_id\":6,\"in_stock\":true,\"specs\":{\"battery\":\"36V\"}},{\"sku\":\"KIT-001\",\"name\":\"Café espresso machine\",\"description\":\"Espresso machine with milk frother\",\"price\":429.0,\"category_id\":5,\"in_stock\":true,\"specs\":{\"bar\":15}}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

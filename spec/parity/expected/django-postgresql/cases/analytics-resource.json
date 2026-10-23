@@ -1,0 +1,42 @@
+{
+  "case": {
+    "collection": "vipcustomer",
+    "covers": "output_as_resource → text + embedded JSON resource",
+    "id": "analytics-resource",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "id": 1,
+          "name": 1
+        }
+      }
+    ],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 6,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Results attached",
+          "type": "text"
+        },
+        {
+          "resource": {
+            "mimeType": "application/json",
+            "text": "[{\"id\":1,\"name\":\"Anna de Vries\"},{\"id\":2,\"name\":\"Bram Peeters\"},{\"id\":3,\"name\":\"Clara Müller\"},{\"id\":4,\"name\":\"Daan Jansen\"},{\"id\":5,\"name\":\"Emma Claes\"},{\"id\":6,\"name\":\"Felix Schmidt\"},{\"id\":7,\"name\":\"Gijs Bakker\"},{\"id\":8,\"name\":\"Hanna Wouters\"}]",
+            "uri": "resource://query_result/json"
+          },
+          "type": "resource"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

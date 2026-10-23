@@ -1,0 +1,28 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "quirk: no $project → every column (email, notes) despite `fields`; get_queryset scope applies",
+    "id": "no-project-all-columns",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 55,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Anna de Vries\",\"country\":\"NL\",\"active\":true,\"signed_up_on\":\"2023-02-21\"},{\"id\":2,\"name\":\"Bram Peeters\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-03-30\"},{\"id\":3,\"name\":\"Clara Müller\",\"country\":\"DE\",\"active\":true,\"signed_up_on\":\"2023-05-06\"},{\"id\":5,\"name\":\"Emma Claes\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-07-19\"},{\"id\":6,\"name\":\"Felix Schmidt\",\"country\":\"DE\",\"active\":true,\"signed_up_on\":\"2023-08-25\"},{\"id\":8,\"name\":\"Hanna Wouters\",\"country\":\"BE\",\"active\":true,\"signed_up_on\":\"2023-11-07\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

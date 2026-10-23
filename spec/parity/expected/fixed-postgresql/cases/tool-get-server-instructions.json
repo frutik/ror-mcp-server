@@ -1,0 +1,22 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "instructions tool",
+    "id": "tool-get-server-instructions",
+    "server": "default",
+    "tool": "get_server_instructions"
+  },
+  "response": {
+    "id": 92,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Reference shop server for ror-mcp-server parity tests. Query the collections with query_data_collections.",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "case": {
+    "collection": "category",
+    "covers": "no stages → whole collection",
+    "id": "empty-pipeline",
+    "pipeline": [],
+    "server": "default"
+  },
+  "response": {
+    "id": 58,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Electronics\",\"slug\":\"electronics\",\"parent_id\":null},{\"id\":2,\"name\":\"Laptops\",\"slug\":\"laptops\",\"parent_id\":1},{\"id\":3,\"name\":\"Phones\",\"slug\":\"phones\",\"parent_id\":1},{\"id\":4,\"name\":\"Home & Garden\",\"slug\":\"home-garden\",\"parent_id\":null},{\"id\":5,\"name\":\"Kitchen\",\"slug\":\"kitchen\",\"parent_id\":4},{\"id\":6,\"name\":\"Garden tools\",\"slug\":\"garden-tools\",\"parent_id\":4}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

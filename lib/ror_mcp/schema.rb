@@ -78,7 +78,7 @@ module RorMcp
       required = []
       fields_of(collection, published_models, catalog: catalog).each do |field|
         properties[field.name] = property(collection, field, catalog: catalog)
-        required << field.name if required?(field)
+        required << field.name if required?(field, collection.model)
       end
       collection.computed_fields.each_value { |computed| properties[computed.name] = computed_property(computed) }
       if (routing = collection.routing_field)
@@ -144,12 +144,16 @@ module RorMcp
     end
 
     # Django: null=False and blank=False. Auto-increment keys are blank; a string
-    # column defaulting to "" stands in for blank=True.
-    def required?(field)
+    # field defaulting to "" stands in for blank=True. The default is the model's
+    # (column default or `attribute :f, default: ""`): MySQL can't store a
+    # default on TEXT columns, Django keeps defaults in Python anyway.
+    def required?(field, model = nil)
       column = field.column
       return false if column.null
       return false if field.primary_key && column.type == :integer
-      return false if field.text? && column.default == ""
+
+      default = model ? model.column_defaults[field.attname] : column.default
+      return false if field.text? && default == ""
 
       true
     end

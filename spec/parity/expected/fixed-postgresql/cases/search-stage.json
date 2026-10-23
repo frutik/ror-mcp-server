@@ -1,0 +1,40 @@
+{
+  "case": {
+    "collection": "product",
+    "covers": "$search stage",
+    "id": "search-stage",
+    "pipeline": [
+      {
+        "$search": {
+          "text": {
+            "query": "phone"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "sku": 1
+        }
+      },
+      {
+        "$project": {
+          "sku": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 36,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"sku\":\"PHN-001\"},{\"sku\":\"PHN-002\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

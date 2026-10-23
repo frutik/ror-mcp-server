@@ -1,0 +1,40 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$match literal → equality",
+    "id": "match-literal",
+    "pipeline": [
+      {
+        "$match": {
+          "status": "paid"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "id": 1,
+          "number": 1,
+          "status": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 3,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":3,\"number\":\"ORD-1003\",\"status\":\"paid\"},{\"id\":7,\"number\":\"ORD-1007\",\"status\":\"paid\"},{\"id\":11,\"number\":\"ORD-1011\",\"status\":\"paid\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

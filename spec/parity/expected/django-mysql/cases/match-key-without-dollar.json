@@ -1,0 +1,30 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "non-$ key inside a condition object → error",
+    "id": "match-key-without-dollar",
+    "pipeline": [
+      {
+        "$match": {
+          "status": {
+            "eq": "paid"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 23,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Unknown match key: eq : please reveiwe pipeline syntax constraints",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

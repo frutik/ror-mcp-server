@@ -1,0 +1,47 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "keys next to $or are silently dropped (returns early)",
+    "id": "match-or-ignores-siblings",
+    "pipeline": [
+      {
+        "$match": {
+          "$or": [
+            {
+              "status": "paid"
+            },
+            {
+              "status": "shipped"
+            }
+          ],
+          "customer": 2
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "customer": 1,
+          "number": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 17,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1002\",\"customer\":2},{\"number\":\"ORD-1003\",\"customer\":1},{\"number\":\"ORD-1006\",\"customer\":2},{\"number\":\"ORD-1007\",\"customer\":5},{\"number\":\"ORD-1010\",\"customer\":6},{\"number\":\"ORD-1011\",\"customer\":7}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$or",
+    "id": "match-or",
+    "pipeline": [
+      {
+        "$match": {
+          "$or": [
+            {
+              "status": "cancelled"
+            },
+            {
+              "total": {
+                "$lt": 200
+              }
+            }
+          ]
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "status": 1,
+          "total": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 15,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"status\":\"cancelled\",\"total\":499.9},{\"number\":\"ORD-1005\",\"status\":\"cancelled\",\"total\":4883.0},{\"number\":\"ORD-1009\",\"status\":\"cancelled\",\"total\":2366.7},{\"number\":\"ORD-1013\",\"status\":\"cancelled\",\"total\":1517.8}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

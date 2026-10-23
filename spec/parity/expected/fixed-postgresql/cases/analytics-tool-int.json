@@ -1,0 +1,22 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "custom tool on the second server",
+    "id": "analytics-tool-int",
+    "server": "analytics",
+    "tool": "line_item_count"
+  },
+  "response": {
+    "id": 12,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "29",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

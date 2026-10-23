@@ -1,0 +1,45 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "localField given as attname (customer_id)",
+    "id": "lookup-local-column-name",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "customer",
+          "localField": "customer_id"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "number": 1,
+          "who": "$c.name"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 72,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"who\":\"Bram Peeters\"},{\"number\":\"ORD-1002\",\"who\":\"Bram Peeters\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

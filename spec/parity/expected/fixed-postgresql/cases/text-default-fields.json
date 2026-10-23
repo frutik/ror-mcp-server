@@ -1,0 +1,41 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "default search fields = Char/Text fields within `fields`",
+    "id": "text-default-fields",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "NL"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "id": 1,
+          "name": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 35,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":1,\"name\":\"Anna de Vries\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

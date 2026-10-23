@@ -1,0 +1,31 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "foreignField other than _id/pk/PK name → error",
+    "id": "lookup-foreign-bad",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "name",
+          "from": "customer",
+          "localField": "customer"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 71,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: Invalid foreignField 'name': please review supported pipeline syntax and  schemas for order.",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

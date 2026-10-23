@@ -1,0 +1,39 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "quirk: $skip is applied after $limit whatever the order (3 - 2 = 1 row)",
+    "id": "skip-then-limit",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$skip": 2
+      },
+      {
+        "$limit": 3
+      },
+      {
+        "$project": {
+          "id": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 45,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":3}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

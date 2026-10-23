@@ -1,0 +1,42 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$gte/$lte on a datetime with ISO strings",
+    "id": "match-gte-lte-datetime",
+    "pipeline": [
+      {
+        "$match": {
+          "placed_at": {
+            "$gte": "2025-01-01T00:00:00Z",
+            "$lte": "2025-06-30T23:59:59Z"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "placed_at": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "placed_at": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 9,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1003\",\"placed_at\":\"2025-01-11T22:10:00Z\"},{\"number\":\"ORD-1004\",\"placed_at\":\"2025-02-03T10:20:00Z\"},{\"number\":\"ORD-1005\",\"placed_at\":\"2025-02-26T17:22:00Z\"},{\"number\":\"ORD-1006\",\"placed_at\":\"2025-03-21T19:29:00Z\"},{\"number\":\"ORD-1007\",\"placed_at\":\"2025-04-13T15:32:00Z\"},{\"number\":\"ORD-1008\",\"placed_at\":\"2025-05-06T12:57:00Z\"},{\"number\":\"ORD-1009\",\"placed_at\":\"2025-05-29T19:59:00Z\"},{\"number\":\"ORD-1010\",\"placed_at\":\"2025-06-21T21:35:00Z\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

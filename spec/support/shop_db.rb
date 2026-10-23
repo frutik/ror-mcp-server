@@ -2,17 +2,33 @@
 
 require "active_record"
 
-# An in-memory copy of the parity shop schema (spec/dummy/db/migrate) with a
-# few rows, for specs that need real queries without the dummy app.
+# A copy of the parity shop schema (spec/dummy/db/migrate) with a few rows,
+# for specs that need real queries without the dummy app. In-memory SQLite by
+# default; RORMCP_TEST_DATABASE_URL selects another database, e.g.
+#   postgres://postgres@127.0.0.1:5433/ror_mcp_test
+#   trilogy://root@127.0.0.1:3306/ror_mcp_test
 module ShopDb
   module_function
+
+  def url
+    ENV["RORMCP_TEST_DATABASE_URL"].to_s.empty? ? nil : ENV["RORMCP_TEST_DATABASE_URL"]
+  end
+
+  def adapter
+    ActiveRecord::Base.connection.adapter_name.downcase
+  end
+
+  def mysql?
+    adapter.match?(/mysql|trilogy/)
+  end
 
   def setup!
     return if @ready
 
-    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
+    ActiveRecord::Base.establish_connection(url || { adapter: "sqlite3", database: ":memory:" })
     ActiveRecord::Schema.verbose = false
     ActiveRecord::Schema.define do
+      %w[orders products customers categories].each { |t| drop_table(t, if_exists: true) }
       create_table :categories do |t|
         t.string :name, null: false
         t.references :parent
@@ -27,7 +43,8 @@ module ShopDb
       create_table :products, id: false do |t|
         t.string :sku, primary_key: true
         t.string :name, null: false
-        t.text :description, null: false, default: ""
+        # MySQL can't store a default on TEXT; the model declares it (attribute … default: "").
+        t.text :description, null: false, **(ShopDb.mysql? ? {} : { default: "" })
         t.decimal :price, precision: 10, scale: 2, null: false
         t.references :category, null: false
         t.json :specs
@@ -92,6 +109,7 @@ module ShopDb
   class Product < Record
     self.table_name = "products"
     self.primary_key = "sku"
+    attribute :description, default: ""
     belongs_to :category, class_name: "ShopDb::Category"
   end
 

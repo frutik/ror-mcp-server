@@ -149,8 +149,7 @@ module RorMcp
           pattern = format(LIKE_PATTERNS[kind], value.to_s.gsub(/[\\%_]/) { |c| "\\#{c}" })
           attribute.matches(pattern, "\\", !kind.start_with?("i"))
         when "regex", "iregex"
-          pattern = kind == "iregex" ? "(?i)#{value}" : value.to_s
-          Arel::Nodes::InfixOperation.new(sqlite ? "REGEXP" : (kind == "iregex" ? "~*" : "~"), attribute, Arel::Nodes.build_quoted(pattern))
+          regex(kind, attribute, value.to_s, connection)
         when "range"
           raise QueryError, "$range takes [low, high]" unless value.is_a?(Array) && value.size == 2
 
@@ -173,6 +172,20 @@ module RorMcp
         raise QueryError, "Invalid value for $#{kind} on '#{field}': #{e.message}"
       end
 
+      # Django's regex lookups per backend: SQLite runs Ruby's Regexp through the
+      # REGEXP function the executor registers; PostgreSQL ~ / ~*; MySQL REGEXP_LIKE with 'c' / 'i'.
+      def self.regex(kind, attribute, pattern, connection)
+        quoted = Arel::Nodes.build_quoted(pattern)
+        case connection.adapter_name
+        when /sqlite/i
+          Arel::Nodes::InfixOperation.new("REGEXP", attribute, Arel::Nodes.build_quoted(kind == "iregex" ? "(?i)#{pattern}" : pattern))
+        when /mysql|trilogy/i
+          Arel::Nodes::NamedFunction.new("REGEXP_LIKE", [attribute, quoted, Arel::Nodes.build_quoted(kind == "iregex" ? "i" : "c")])
+        else
+          Arel::Nodes::InfixOperation.new(kind == "iregex" ? "~*" : "~", attribute, quoted)
+        end
+      end
+
       SQLITE_FORMATS = { "month" => "%m", "day" => "%d", "hour" => "%H", "minute" => "%M", "second" => "%S", "week_day" => "%w" }.freeze
 
       def self.date_part(kind, attribute, connection)
@@ -185,7 +198,10 @@ module RorMcp
           return Arel.sql(kind == "week_day" ? "(#{part} + 1)" : part)
         end
 
-        return Arel.sql("(EXTRACT(DOW FROM #{column}) + 1)") if kind == "week_day"
+        if kind == "week_day"
+          # Django: DAYOFWEEK() on MySQL (1 = Sunday), EXTRACT(DOW) + 1 on PostgreSQL.
+          return Arel.sql(connection.adapter_name.match?(/mysql|trilogy/i) ? "DAYOFWEEK(#{column})" : "(EXTRACT(DOW FROM #{column}) + 1)")
+        end
 
         Arel.sql("EXTRACT(#{kind.upcase} FROM #{column})")
       end

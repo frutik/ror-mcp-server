@@ -98,7 +98,8 @@ gem "ror-mcp-server", github: "frutik/ror-mcp-server"
 
 Once released *(M7)*: `bundle add ror-mcp-server`.
 
-Requirements: Ruby ≥ 3.2, Rails ≥ 7.1.
+Requirements: Ruby ≥ 3.2, Rails ≥ 7.1, and SQLite, PostgreSQL or MySQL. All three are verified: the
+gem specs and both parity suites pass on SQLite 3, PostgreSQL 14 and MySQL 8.4.
 
 ---
 

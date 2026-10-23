@@ -1,0 +1,36 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$project before $group → error",
+    "id": "group-after-project",
+    "pipeline": [
+      {
+        "$project": {
+          "status": 1
+        }
+      },
+      {
+        "$group": {
+          "_id": "$status",
+          "n": {
+            "$sum": 1
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 88,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $project cannot appear when pipeline contains $group : please review pipeline syntax constriants.",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

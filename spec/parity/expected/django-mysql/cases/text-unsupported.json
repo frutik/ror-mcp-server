@@ -1,0 +1,30 @@
+{
+  "case": {
+    "collection": "lineitem",
+    "covers": "$text on a collection without text fields → error",
+    "id": "text-unsupported",
+    "pipeline": [
+      {
+        "$match": {
+          "$text": {
+            "$search": "x"
+          }
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 34,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: $text used but full text search is not supported for this collection.",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

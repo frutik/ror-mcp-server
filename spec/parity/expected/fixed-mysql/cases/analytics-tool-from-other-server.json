@@ -1,0 +1,21 @@
+{
+  "case": {
+    "arguments": {
+      "a": 1,
+      "b": 1
+    },
+    "covers": "tools are per server → unknown tool",
+    "id": "analytics-tool-from-other-server",
+    "server": "analytics",
+    "tool": "add"
+  },
+  "response": {
+    "error": {
+      "code": -32602,
+      "data": "Tool not found: add",
+      "message": "Invalid params"
+    },
+    "id": 13,
+    "jsonrpc": "2.0"
+  }
+}

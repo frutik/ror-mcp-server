@@ -1,0 +1,45 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$lookup to the proxy collection (FK targets Customer, from=vipcustomer)",
+    "id": "analytics-lookup-proxy-target",
+    "pipeline": [
+      {
+        "$lookup": {
+          "as": "c",
+          "foreignField": "_id",
+          "from": "vipcustomer",
+          "localField": "customer"
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "number": 1,
+          "who": "$c.name"
+        }
+      }
+    ],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 9,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "number,who\r\nORD-1001,Bram Peeters\r\nORD-1002,Bram Peeters\r\n",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "case": {
+    "collection": "customer",
+    "covers": "collection published only on the other server → error",
+    "id": "analytics-unpublished-collection",
+    "pipeline": [],
+    "server": "analytics"
+  },
+  "response": {
+    "id": 8,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "Error executing tool query_data_collections: No such collection, available collections: order, vipcustomer",
+          "type": "text"
+        }
+      ],
+      "isError": true
+    }
+  }
+}

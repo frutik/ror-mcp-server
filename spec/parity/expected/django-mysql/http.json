@@ -1,0 +1,71 @@
+{
+  "analytics/bad-token": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 401,
+    "www_authenticate": "Bearer"
+  },
+  "analytics/initialize": {
+    "content_type": "application/json",
+    "has_session_header": false,
+    "instructions": "Reporting server. Orders come back as CSV.",
+    "server_name": "parity-analytics",
+    "status": 200
+  },
+  "analytics/no-auth": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 401,
+    "www_authenticate": "Bearer"
+  },
+  "analytics/tools-list-no-session": {
+    "content_type": "application/json",
+    "has_session_header": false,
+    "status": 200
+  },
+  "default/after-delete": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 404
+  },
+  "default/delete-session": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 200
+  },
+  "default/initialize": {
+    "capabilities": [
+      "experimental",
+      "prompts",
+      "resources",
+      "tools"
+    ],
+    "content_type": "application/json",
+    "has_session_header": true,
+    "instructions": "Reference shop server for ror-mcp-server parity tests. Query the collections with query_data_collections.",
+    "protocol_version": "2025-03-26",
+    "server_name": "parity-shop",
+    "status": 200
+  },
+  "default/initialized-notification": {
+    "content_type": null,
+    "has_session_header": true,
+    "status": 202
+  },
+  "default/no-session-non-initialize": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 400
+  },
+  "default/tools-list-with-session": {
+    "content_type": "application/json",
+    "has_session_header": true,
+    "same_session": true,
+    "status": 200
+  },
+  "default/unknown-session": {
+    "content_type": null,
+    "has_session_header": false,
+    "status": 404
+  }
+}

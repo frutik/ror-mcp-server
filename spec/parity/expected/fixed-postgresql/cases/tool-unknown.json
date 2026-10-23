@@ -1,0 +1,18 @@
+{
+  "case": {
+    "arguments": {},
+    "covers": "unknown tool → isError",
+    "id": "tool-unknown",
+    "server": "default",
+    "tool": "does_not_exist"
+  },
+  "response": {
+    "error": {
+      "code": -32602,
+      "data": "Tool not found: does_not_exist",
+      "message": "Invalid params"
+    },
+    "id": 98,
+    "jsonrpc": "2.0"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$project with a $field string",
+    "id": "project-rename",
+    "pipeline": [
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$limit": 2
+      },
+      {
+        "$project": {
+          "key": "$_id",
+          "order_no": "$number"
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 50,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"order_no\":\"ORD-1001\",\"key\":1},{\"order_no\":\"ORD-1002\",\"key\":2}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "case": {
+    "collection": "order",
+    "covers": "$nin (negated in)",
+    "id": "match-nin",
+    "pipeline": [
+      {
+        "$match": {
+          "status": {
+            "$nin": [
+              "paid",
+              "shipped"
+            ]
+          }
+        }
+      },
+      {
+        "$sort": {
+          "id": 1
+        }
+      },
+      {
+        "$project": {
+          "number": 1,
+          "status": 1
+        }
+      }
+    ],
+    "server": "default"
+  },
+  "response": {
+    "id": 12,
+    "jsonrpc": "2.0",
+    "result": {
+      "content": [
+        {
+          "text": "[{\"number\":\"ORD-1001\",\"status\":\"cancelled\"},{\"number\":\"ORD-1004\",\"status\":\"pending\"},{\"number\":\"ORD-1005\",\"status\":\"cancelled\"},{\"number\":\"ORD-1008\",\"status\":\"pending\"},{\"number\":\"ORD-1009\",\"status\":\"cancelled\"},{\"number\":\"ORD-1012\",\"status\":\"pending\"},{\"number\":\"ORD-1013\",\"status\":\"cancelled\"},{\"number\":\"ORD-1014\",\"status\":\"pending\"}]",
+          "type": "text"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
