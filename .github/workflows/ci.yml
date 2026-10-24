@@ -81,4 +81,6 @@ jobs:
       - run: spec/parity/bin/ci-parity
       - name: ror_mcp:check on the dummy app
         working-directory: spec/dummy
-        run: bin/rails ror_mcp:check
+        run: |
+          [ -n "$DATABASE_URL" ] || unset DATABASE_URL   # Rails rejects an empty DATABASE_URL (SQLite jobs)
+          bin/rails ror_mcp:check
