@@ -6,3 +6,7 @@ spec/parity/django_app/db.sqlite3
 /.bundle
 *.gem
 /gemfiles/*.lock
+
+# Local security audit notes and reproduction (not published)
+SECURITY_AUDIT.md
+audit/
