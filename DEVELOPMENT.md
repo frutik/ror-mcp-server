@@ -17,6 +17,8 @@ and where the project stands. The full design, decisions and verified assumption
 - [Porting notes](#porting-notes)
 - [Releasing](#releasing)
 
+Why things are the way they are: [architecture decision records](docs/adr/README.md).
+
 ---
 
 ## Status

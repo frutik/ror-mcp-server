@@ -37,7 +37,7 @@ Both the repo root and `spec/dummy` install gems into `vendor/bundle` (the Homeb
 
 **Docs split:** `README.md` is for users of the gem: what it is, features, how to use it. It mentions the Django port exactly once (intro). Everything about the port, parity, milestones, tests and CI goes in `DEVELOPMENT.md`.
 
-**`PLAN.md` is the source of truth.** Read the relevant section before implementing anything; when a decision changes, update `PLAN.md` along with the code.
+**`PLAN.md` is the source of truth.** Read the relevant section before implementing anything; when a decision changes, update `PLAN.md` along with the code. Decisions that are hard to reverse also get an ADR in `docs/adr/` (format and index in its README).
 
 The Python library being ported is vendored as a git submodule at `django-mcp-server/` (fork `gts360/django-mcp-server`; run `git submodule update --init` after cloning). Check behaviour against its source (`mcp_server/djangomcp.py`, `mcp_server/query_tool.py`) instead of guessing. The parity baseline is the submodule's pinned commit (`0599c7d`, v0.5.6 + 16 commits; no `v0.5.7` tag exists) with `mcp==1.30.0`. `mcp` 2.x breaks django-mcp-server.
 
