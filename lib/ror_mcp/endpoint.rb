@@ -7,6 +7,7 @@ module RorMcp
   # Rack app serving one server over Streamable HTTP (django-mcp-server's
   # MCPServerStreamableHttpView + DjangoMCP.handle_django_request):
   #
+  #   Origin       → 403 for a browser page on an origin not allowed (MCP transport spec)
   #   authenticate → 401 + WWW-Authenticate: Bearer when it returns nil
   #   DELETE       → forget the session, 200
   #   stateful     → Mcp-Session-Id rules: unknown id 404; no id: issue one on
@@ -30,6 +31,8 @@ module RorMcp
 
       request = build_request(env)
       RorMcp.current_request = request
+      return text_response(403, "Origin not allowed") unless origin_allowed?(server, request)
+
       if server.authenticator
         context = server.authenticator.call(request)
         return text_response(401, "Unauthorized", "www-authenticate" => "Bearer") unless context
@@ -63,6 +66,17 @@ module RorMcp
     end
 
     private
+
+    # Browsers send Origin, other MCP clients don't. A page may call the server
+    # from its own origin or a listed one; anything else could be another site
+    # driving the user's browser. ("null" comes from sandboxed and file:// pages.)
+    def origin_allowed?(server, request)
+      origin = request.get_header("HTTP_ORIGIN")
+      return true if origin.nil? || server.allowed_origins == :any
+
+      origin = origin.downcase.chomp("/")
+      origin == request.base_url.downcase || server.allowed_origins.include?(origin)
+    end
 
     def delete_session(server, env)
       session_id = env[SESSION_ENV].to_s

@@ -20,3 +20,4 @@ gets a new ADR that supersedes the old one, and the old one's status says so.
 | [0009](0009-security-findings-stay-private-until-fixed.md) | Security findings stay out of the repository until fixed | Accepted |
 | [0010](0010-group-over-max-limit-is-refused.md) | A `$group` over `max_limit` groups is refused, not cut short | Accepted |
 | [0011](0011-same-database-means-same-connection-class.md) | Same database means same connection class | Accepted |
+| [0012](0012-validate-origin-in-the-endpoint.md) | Validate `Origin` in the endpoint: own origin and a list | Accepted |

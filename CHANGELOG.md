@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Endpoints validate `Origin`, as the MCP transport spec requires: a browser request from another origin gets 403
+  before authentication, for every method. Requests without `Origin` (non-browser clients) and from the server's
+  own origin pass. New `c.allowed_origins` (global, or `allowed_origins:` per server; `:any` turns it off). The
+  docs no longer claim Rails' `config.hosts` checks `Origin`; it checks `Host`.
 - `:fixed`: `max_limit` caps every query, also when `default_limit` is nil; it used to cap only an explicit or
   default limit. A `$group` with more than `max_limit` groups is refused with an error instead of returning them
   all (its output can't be paged, so cutting it short would look complete).
