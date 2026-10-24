@@ -684,7 +684,8 @@ bin/rails ror_mcp:check                                                  # exits
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for the repository layout, running the tests on each
-database, the compatibility test suite, and the project's status.
+database, the compatibility test suite, and the project's status. To report a problem or send a
+change, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
