@@ -96,6 +96,12 @@ RORMCP_TEST_DATABASE_URL=trilogy://root@127.0.0.1:3306/ror_mcp_test bundle exec 
 BUNDLE_GEMFILE=gemfiles/rails_7.1.gemfile BUNDLE_PATH=$PWD/vendor/bundle bundle exec rspec   # another Rails
 ```
 
+`spec/ror_mcp/fixed_contract_spec.rb` checks what `:fixed` promises over every combination of
+scope shape and pipeline path: clients see only rows the collection's `scope` publishes, only its
+`fields`, and never more than `max_limit` rows. Combinations that break because of an open issue are
+pending with its id from the security audit. RSpec fails them once they pass, so a fix also deletes
+their entry. A new scope shape or pipeline stage belongs in its tables.
+
 ### Parity suite
 
 ```sh
