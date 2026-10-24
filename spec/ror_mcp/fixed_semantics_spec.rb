@@ -194,6 +194,21 @@ RSpec.describe "fixed semantics" do
         .to eq([{ "n" => 2 }])
     end
 
+    it "filters a window taken without $sort" do
+      expect(ids([{ "$limit" => 4 }, { "$match" => { "status" => "paid" } }]).sort).to eq([2, 3])
+    end
+
+    it "keeps a paging scope as the collection's rows, in its order" do
+      customers.define_method(:scope) { |_context| ShopDb::Customer.order(id: :desc).limit(2) }
+      expect(ids([], customers)).to eq([3, 2])
+      expect(ids([{ "$match" => { "_id" => 1 } }], customers)).to eq([])
+      expect(ids([{ "$sort" => { "id" => 1 } }, { "$limit" => 1 }], customers)).to eq([2])
+      customers.define_method(:scope) { |_context| ShopDb::Customer.order(:id).offset(1) }
+      expect(ids([{ "$skip" => 1 }], customers)).to eq([3])
+      customers.define_method(:scope) { |_context| ShopDb::Customer.limit(0) }
+      expect(ids([], customers)).to eq([])
+    end
+
     it "applies default_limit and clamps to max_limit" do
       RorMcp.configuration.default_limit = 2
       expect(ids([{ "$sort" => { "id" => 1 } }])).to eq([1, 2])

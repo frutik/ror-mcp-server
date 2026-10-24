@@ -29,7 +29,7 @@ module RorMcp
                      semantics: RorMcp.configuration.pipeline_semantics, context: nil)
         @collection = collection
         @model = collection.model
-        @relation = relation
+        @relation = scope_window(relation)
         @catalog = Catalog.new(collection, collections, semantics: semantics, context: context)
         @fields = Fields.new(@catalog, pseudo: routing_messages)
         @lookups = Lookups.new(@fields)
@@ -209,14 +209,29 @@ module RorMcp
         inner = inner.joins(*@fields.joins) unless @fields.joins.empty?
         inner = inner.offset(@offset) if @offset.positive?
         inner = inner.limit(@limit) if @limit
-        # Orderings on the base table still apply to the subquery's rows.
-        orders = @relation.order_values.select do |order|
-          order.respond_to?(:expr) && order.expr.respond_to?(:relation) && order.expr.relation.name.to_s == @model.table_name
-        end
-        @relation = @model.unscoped.from(inner, @model.table_name).reorder(*orders)
+        @relation = derived(inner, @relation.order_values)
         @fields.reset_joins
         @offset = 0
         @limit = nil
+      end
+
+      # A scope that pages (limit/offset) defines the rows the collection
+      # publishes: it becomes a derived table first, so client stages filter,
+      # sort and page inside it instead of replacing its window.
+      def scope_window(relation)
+        return relation unless relation.limit_value || relation.offset_value
+
+        derived(relation, relation.order_values)
+      end
+
+      # `inner`'s rows under the table's own name; orderings on the base table
+      # still apply to them.
+      def derived(inner, order_values)
+        orders = order_values.select do |order|
+          order.respond_to?(:expr) && order.expr.respond_to?(:relation) && order.expr.relation.name.to_s == @model.table_name
+        end
+        relation = @model.unscoped.from(inner, @model.table_name)
+        orders.empty? ? relation : relation.reorder(*orders) # reorder() refuses no arguments
       end
 
       # --- projection and rows --------------------------------------------------

@@ -8,6 +8,11 @@
 - `:fixed`: a `$lookup` now applies the target collection's `scope` whenever it restricts rows. Scopes that did so
   without a `where`, `joins` or `limit` on the relation (a `from` subquery, `offset`, `having`) were dropped, and the
   join read the whole table.
+- A collection `scope` with `limit` or `offset` now bounds the collection's rows. Pipeline stages used to replace
+  that window (`limit(0)` published every row, a `$match` reached rows past the limit); the scope is now a derived
+  table that stages work inside, in both semantics.
+- `:fixed`: a `$match` or `$sort` after a `$limit`/`$skip` window taken without `$sort` no longer fails with
+  "The method .reorder() must contain arguments".
 
 ## 0.1.1 — 2026-10-24
 
