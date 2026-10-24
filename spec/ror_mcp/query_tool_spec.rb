@@ -41,7 +41,8 @@ RSpec.describe RorMcp::Tools::QueryTool do
 
     it "is django-mcp-server's preamble followed by one section per collection" do
       expect(text).to start_with("\nUse this tool to query data available in the server. \n")
-      expect(text).to include("## Available collections to query\n\n### 'order' collection\nDocuments conform the following JSON Schema\n```json\n{'description': 'Order(")
+      expect(text).to include("## Available collections to query\n\n### 'order' collection\n" \
+                              "Documents conform the following JSON Schema\n```json\n{'description': 'Order(")
       expect(text).to include("'customer': {'bsonType': 'objectId', 'description': 'Reference to Customer', 'ref': 'Customer'}")
       expect(text).to include("```\n\nFull text search is supported on the following fields: number, status.\n\n" \
                               "Extra instructions for this collection:\n\nLatest order = highest id.\n\n### 'customer' collection")

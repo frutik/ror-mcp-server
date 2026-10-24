@@ -21,7 +21,8 @@ module RorMcp
 
       def build(collections, server: nil)
         collections.each_value(&:validate_columns!)
-        MCP::Tool.define(name: NAME, description: description(collections), input_schema: INPUT_SCHEMA) do |collection:, search_pipeline: [], server_context: nil|
+        MCP::Tool.define(name: NAME, description: description(collections),
+                         input_schema: INPUT_SCHEMA) do |collection:, search_pipeline: [], server_context: nil|
           context = server_context.respond_to?(:auth_info) ? server_context.auth_info : nil
           # Arguments may arrive with symbol keys; the compiler works on JSON as sent.
           pipeline = JSON.parse(JSON.generate(search_pipeline))

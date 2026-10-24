@@ -13,6 +13,7 @@ M6 done; verified on SQLite, PostgreSQL 14 and MySQL 8.4 (gem specs and both par
 bundle install
 bundle exec rspec                                        # all specs (spec/dummy and spec/parity are excluded)
 bundle exec rspec spec/ror_mcp/endpoint_spec.rb:90      # one example (line of an `it`)
+bundle exec rubocop                                      # lint; config in .rubocop.yml follows the existing style
 BUNDLE_GEMFILE=gemfiles/rails_7.1.gemfile BUNDLE_PATH=$PWD/vendor/bundle bundle exec rspec   # another Rails (CI matrix)
 (cd spec/dummy && bin/rails ror_mcp:describe && bin/rails ror_mcp:check)
 

@@ -24,7 +24,7 @@ module RorMcp
         size = Tools::QueryTool.description(collections).length
         budget = RorMcp.configuration.description_budget
         io.puts "  query_data_collections description: #{size} chars" \
-                "#{budget ? " of a #{budget} budget#{size > budget ? ' — OVER' : ''}" : ''}"
+                "#{" of a #{budget} budget#{' — OVER' if size > budget}" if budget}"
       end
     end
 
