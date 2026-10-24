@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now
+  rejected. Such a query used to read one collection's rows under the other's fields, so a more restricted
+  collection could expose rows its `scope` excludes. One collection under several aliases still works.
+
 ## 0.1.1 — 2026-10-24
 
 Version bump only; no functional changes since 0.1.0.
