@@ -303,7 +303,9 @@ Full-text search:
 Rows come back as one JSON text content. Without `$project`, a row holds the collection's
 `fields`, with foreign keys as `<name>_id`. Decimals are numbers, and datetimes are ISO 8601
 in UTC. An empty result is `[]`. Queries without `$limit` get `default_limit` rows (100),
-and no query gets more than `max_limit` (1000). See [Output formats](#output-formats) for
+and no query gets more than `max_limit` (1000), even with `default_limit = nil`. A `$group`
+with more than `max_limit` groups is refused with an error rather than cut short, since its
+output can't be paged; narrow it with a `$match`. See [Output formats](#output-formats) for
 CSV, JSONL and embedded resources.
 
 ---
@@ -357,7 +359,7 @@ end
 | `extra_filters` | Extra `$match` operators: `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `iexact`, `iregex`, `range`, `date`, `year`, `month`, `day`, `hour`, `minute`, `second`, `week_day`, `quarter`. Use as `{"number": {"$icontains": "x"}}`. |
 | `computed` | A SQL expression published as a field: in the schema, and usable in every stage, also through `$lookup`. `{table}` stands for the collection's table (or its join alias). |
 | `reference` | Where a `belongs_to` points, when it can't be inferred. Subclasses (STI) are resolved automatically. |
-| `max_limit` | Upper bound on `$limit` for this collection. |
+| `max_limit` | Upper bound on rows per query for this collection (and on `$group` groups). |
 | `description`, `describe`, `choice_labels` | Text for the schema. Defaults: `Model(field, …)`, the column comment, the humanized enum key. |
 | `instructions` | Extra text after the collection's schema in the tool description. Write it as a quoted heredoc (`<<~'TXT'`): in `<<~TXT` or `"…"`, Ruby reads `#$name` and `#@name` in pipeline examples as variables, and the text silently loses them. |
 | `output_format`, `output_as_resource` | See [Output formats](#output-formats). |
@@ -431,7 +433,7 @@ RorMcp.configure do |c|
   c.read_role          = nil          # e.g. :reading, to run queries on a replica
   c.statement_timeout  = nil          # e.g. 15.seconds (PostgreSQL, MySQL)
   c.default_limit      = 100          # rows when a pipeline has no $limit
-  c.max_limit          = 1000         # upper bound on $limit
+  c.max_limit          = 1000         # upper bound on rows per query; nil = none
   c.description_budget = nil          # characters per server's query tool description
   c.description_budget_mode = :warn   # or :raise
 

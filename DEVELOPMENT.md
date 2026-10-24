@@ -190,7 +190,7 @@ against django-mcp-server) or corrects them (`:fixed`, the default):
 | `$sort` with any value other than `1` sorts descending; aliases can't be sorted | reproduced | only `1`/`-1`; aliases allowed |
 | `$skip` applies after `$limit` whatever the order; filters after `$limit` fail | reproduced | stages applied in order |
 | `$project: {field: 0}` is ignored | reproduced | exclusion supported |
-| No default or maximum `$limit` | reproduced | `default_limit` / `max_limit` |
+| No default or maximum `$limit` | reproduced | `default_limit` / `max_limit`; a `$group` over `max_limit` groups is refused |
 | An empty result returns no content | reproduced | `[]` |
 
 In both modes, `$sum: 1` uses `COUNT(*)` and queries run in the read-only envelope.
