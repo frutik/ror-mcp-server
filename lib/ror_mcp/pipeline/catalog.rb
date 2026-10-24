@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 module RorMcp
   module Pipeline
     # What one query may see: the collection queried, the other collections on

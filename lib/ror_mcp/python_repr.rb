@@ -46,7 +46,7 @@ module RorMcp
       return "-inf" if value == -Float::INFINITY
       return "nan" if value.nan?
 
-      value.to_s.sub(/\.0e/, "e")
+      value.to_s.sub(".0e", "e")
     end
   end
 end

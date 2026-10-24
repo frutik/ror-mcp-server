@@ -22,9 +22,11 @@ RSpec.describe RorMcp::Toolset do
         param :filters, :object
         param :limit, :integer, default: 20
       end
+      # rubocop:disable-next Lint/UnusedMethodArgument -- the signature is what the tool declares
       def search(query:, brands: nil, filters: nil, limit: 20) = { "query" => query, "brands" => brands, "limit" => limit }
 
       tool :rows, description: "A list." do
+        # no params
       end
       def rows = [{ "a" => 1 }, "text", 2]
 

@@ -50,6 +50,7 @@ module RorMcp
     def respond(collection, rows)
       if rows.empty?
         return MCP::Tool::Response.new([text("No results found")]) if collection.output_as_resource
+
         # django-mcp-server returns [] unrendered (no content); :fixed renders it.
         return MCP::Tool::Response.new(@semantics == :fixed ? [text(Renderers.for(collection.output_format).render([]))] : [])
       end
