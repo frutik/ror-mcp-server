@@ -5,6 +5,10 @@
 - `:fixed`: `max_limit` caps every query, also when `default_limit` is nil; it used to cap only an explicit or
   default limit. A `$group` with more than `max_limit` groups is refused with an error instead of returning them
   all (its output can't be paged, so cutting it short would look complete).
+- References and `$lookup` between collections now require the same connection class. The check compared only
+  adapter and database name, and answered "same" when a connection was missing, so two databases sharing a name
+  (two hosts, or SQLite `:memory:`) passed and the join read the queried database's same-named table. One check
+  now serves the schema and the compiler.
 - Docs and the collection generator write `instructions` as a quoted heredoc (`<<~'TXT'`): in an interpolating
   one, Ruby reads `#$name` / `#@name` in pipeline examples as variables and the text silently loses them.
 - `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now

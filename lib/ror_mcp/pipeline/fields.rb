@@ -62,7 +62,9 @@ module RorMcp
             raise QueryError, "'#{part}' points at #{field.reflection.klass.name}, which is not published on this server"
           end
           unless @catalog.same_database?(model, field.reflection.klass)
-            raise QueryError, "Cannot join '#{part}': #{model.name} and #{field.reflection.klass.name} live in different databases"
+            raise QueryError, "Cannot join '#{part}': #{model.name} and #{field.reflection.klass.name} are in different databases " \
+                              "(connections #{model.connection_specification_name} and " \
+                              "#{field.reflection.klass.connection_specification_name}); a join needs both under one connection class"
           end
 
           nullable ||= field.column.null

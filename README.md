@@ -623,7 +623,10 @@ end
 ```
 
 - References into another database are left out of the schema, and a `$lookup` across
-  databases is refused.
+  databases is refused. Two models share a database when they share a connection class
+  (`ApplicationRecord` and models without one of their own count as one); roles, replicas
+  and shards of that class are the same database. Separate classes are separate databases,
+  even when their configuration names the same database: put models that join under one class.
 - A routing field appears in the schema and is required as an equality in `$match`
   (`{"region": "eu"}`). The query then runs under `connected_to(shard: :eu)`. `to`
   returning `nil` means "no such shard". The field can't be sorted, projected, grouped or

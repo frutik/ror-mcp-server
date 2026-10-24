@@ -82,12 +82,9 @@ module RorMcp
         relation.except(:order).to_sql == relation.klass.unscoped.to_sql ? nil : relation
       end
 
+      # The schema's rule, so a reference the schema shows is one a join accepts.
       def same_database?(a, b)
-        config_a = a.connection_db_config
-        config_b = b.connection_db_config
-        config_a.adapter == config_b.adapter && config_a.database == config_b.database
-      rescue ActiveRecord::ConnectionNotEstablished
-        true
+        Schema.same_database?(a, b)
       end
     end
   end
