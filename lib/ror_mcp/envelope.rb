@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module RorMcp
-  # The safety envelope every query (and every tool not declared `writes: true`)
-  # runs in, whatever the pipeline semantics (PLAN §5):
+  # The safety envelope every query (and every tool not declared `writes: true`,
+  # on each database its toolset declares) runs in, whatever the pipeline semantics (PLAN §5):
   #
   #   connected_to(role:, shard:) {                   # replica / shard, when configured
   #     while_preventing_writes { transaction {        # Rails refuses write statements
@@ -18,11 +18,29 @@ module RorMcp
 
     def read_only(model = ActiveRecord::Base, role: RorMcp.configuration.read_role, shard: nil,
                   timeout: RorMcp.configuration.statement_timeout, &block)
-      return yield unless active_record_connected?(model)
+      # No pool to open a transaction on: Rails' guard still covers every model.
+      return ActiveRecord::Base.while_preventing_writes(&block) unless active_record_connected?(model)
 
+      # Inside connect: connected_to(role:) resets prevent_writes for its class.
       connect(model, role: role, shard: shard) do
         ActiveRecord::Base.while_preventing_writes { in_rolled_back_transaction(model, timeout, &block) }
       end
+    end
+
+    # A tool's envelope: ActiveRecord::Base's, plus a rolled-back read-only
+    # transaction on each database the toolset declares. A declared database
+    # without a connection fails the call rather than run it unguarded.
+    def read_only_on(databases, &block)
+      base = ActiveRecord::Base.connection_specification_name
+      owners = databases.uniq(&:connection_specification_name).reject { |model| model.connection_specification_name == base }
+      missing = owners.reject { |model| active_record_connected?(model) }
+      unless missing.empty?
+        raise ActiveRecord::ConnectionNotEstablished,
+              "no connection for #{missing.map(&:name).join(', ')}: a read-only tool can't run unguarded"
+      end
+
+      owners.reverse.reduce(block) { |inner, model| -> { read_only(model, &inner) } }
+            .then { |guarded| read_only(&guarded) }
     end
 
     def in_rolled_back_transaction(model, timeout)
@@ -67,8 +85,8 @@ module RorMcp
     def connect(model, role:, shard:, &block)
       return yield if role.nil? && shard.nil?
 
-      owner = model.respond_to?(:connection_class_for_self) ? model.connection_class_for_self : ActiveRecord::Base
       options = { role: role, shard: shard }.compact
+      owner = model.respond_to?(:connection_class_for_self) ? model.connection_class_for_self : ActiveRecord::Base
       owner.connected_to(**options, &block)
     end
 

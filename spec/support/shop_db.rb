@@ -63,6 +63,12 @@ module ShopDb
     @ready = true
   end
 
+  # Rebuild after the connection was dropped (an in-memory database goes with it).
+  def reset!
+    @ready = false
+    setup!
+  end
+
   # insert_all! needs every row to carry the same keys.
   def insert(model, rows)
     keys = rows.flat_map(&:keys).uniq

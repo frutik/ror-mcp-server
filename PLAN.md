@@ -395,6 +395,11 @@ end
 Inside a tool: `context` (from `authenticate`) and `request` are available.
 Exceptions turn into MCP tool errors (`isError: true`).
 
+Read-only tools run in the §5 envelope on `ActiveRecord::Base`'s connection. `databases
+AnalyticsRecord, …` (connection classes) adds the same rolled-back read-only transaction on each
+other database the tools use. `while_preventing_writes` applies even when `Base` has no
+connection, and a listed database without one fails the call: the envelope fails closed.
+
 ---
 
 ## 5. Pipeline compiler (the core)

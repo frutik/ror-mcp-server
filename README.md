@@ -404,6 +404,14 @@ end
   class (`render_as_hash`), or a serializer class (`new(value).as_json`).
 - Exceptions become tool errors ("Error executing tool …") with the message.
 - Tools run read-only. A tool that writes must declare `writes: true`.
+- A toolset whose tools read another database names its connection class, so read-only tools
+  get a rolled-back read-only transaction there too (see [Safety](#safety)):
+
+  ```ruby
+  class Reports::Tools < RorMcp::Toolset
+    databases AnalyticsRecord   # abstract class that connects_to the analytics database
+  end
+  ```
 
 ---
 
@@ -585,6 +593,10 @@ connected_to(role: read_role, shard: …) {        # when configured
     …                                            # rolled back at the end
 } } }
 ```
+
+For a tool, the transaction and database-level guards cover `ActiveRecord::Base`'s connection
+and each class the toolset lists in `databases`. Rails' write check covers every model either
+way. If a listed database has no connection, the call fails instead of running unguarded.
 
 For defence in depth, also give the database user that serves MCP read-only grants.
 
