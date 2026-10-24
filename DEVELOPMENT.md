@@ -175,6 +175,7 @@ against django-mcp-server) or corrects them (`:fixed`, the default):
 | Filters, sorts and projections reach columns outside `fields` | reproduced | refused |
 | `alias.field` after `$lookup` reaches any column of the joined model | reproduced | only the target collection's `fields` |
 | The joined collection's `scope` is ignored | reproduced | applied to the join |
+| Two `$lookup`s on one reference with different `from` both read one join, and neither scope applies | reproduced | refused: one collection per reference (several aliases for it are fine) |
 | `$lookup.from` isn't checked against the actual association | accepted | refused, naming the right collection |
 | `localField` names containing `_id` mid-word (`billing_identity`) are mangled | reproduced | resolved by reflection |
 | References to a published subclass (proxy / STI) are dropped | reproduced | resolved, `ref` names the collection |
