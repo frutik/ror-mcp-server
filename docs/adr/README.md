@@ -18,3 +18,4 @@ gets a new ADR that supersedes the old one, and the old one's status says so.
 | [0007](0007-fixed-semantics-contract-spec.md) | Test `:fixed` with a contract spec; known failures are pending by issue id | Accepted |
 | [0008](0008-django-differences-in-development-md.md) | Differences from django-mcp-server live in DEVELOPMENT.md | Accepted |
 | [0009](0009-security-findings-stay-private-until-fixed.md) | Security findings stay out of the repository until fixed | Accepted |
+| [0010](0010-group-over-max-limit-is-refused.md) | A `$group` over `max_limit` groups is refused, not cut short | Accepted |

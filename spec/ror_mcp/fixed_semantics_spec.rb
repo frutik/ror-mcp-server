@@ -216,6 +216,27 @@ RSpec.describe "fixed semantics" do
       orders.max_limit 3
       expect(ids([{ "$sort" => { "id" => 1 } }, { "$limit" => 50 }])).to eq([1, 2, 3])
     end
+
+    it "caps a query with no $limit and no default_limit at max_limit" do
+      RorMcp.configuration.default_limit = nil
+      orders.max_limit 2
+      expect(ids([{ "$sort" => { "id" => 1 } }])).to eq([1, 2])
+    end
+
+    it "refuses a $group with more groups than max_limit, rather than cut it short" do
+      orders.max_limit 3
+      by_status = { "$group" => { "_id" => "$status", "n" => { "$sum" => 1 } } }
+      expect(rows([by_status]).size).to eq(3)
+      expect { rows([{ "$group" => { "_id" => "$id", "n" => { "$sum" => 1 } } }]) }
+        .to raise_error(RorMcp::Pipeline::QueryError, /more than 3 groups \(max_limit\): narrow it with a \$match first/)
+      expect(rows([{ "$match" => { "status" => "paid" } }, { "$group" => { "_id" => "$id", "n" => { "$sum" => 1 } } }]).size).to eq(2)
+    end
+
+    it "leaves $group unbounded under :parity, as django-mcp-server does" do
+      orders.max_limit 1
+      parity = RorMcp::Pipeline::Compiler.new(orders, ShopDb::Order.all, collections: collections, semantics: :parity)
+      expect(parity.rows([{ "$group" => { "_id" => "$id", "n" => { "$sum" => 1 } } }]).size).to eq(4)
+    end
   end
 
   describe "$project" do

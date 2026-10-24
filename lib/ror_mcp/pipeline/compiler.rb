@@ -310,8 +310,8 @@ module RorMcp
       end
 
       def fixed_window(relation)
-        limit = @limit || RorMcp.configuration.default_limit
-        limit = [limit, max_limit].min if limit && max_limit
+        # max_limit caps every query, also when there is no default_limit.
+        limit = [@limit || RorMcp.configuration.default_limit, max_limit].compact.min
         return nil if limit&.zero?
 
         relation = relation.offset(@offset) if @offset.positive?
@@ -428,8 +428,17 @@ module RorMcp
         relation = relation.except(:select, :order).select(*selects)
         # values(f).annotate() with no accumulators adds no GROUP BY: one row per record.
         relation = relation.group(*resolved.map(&:attribute)) unless resolved.empty? || aggregates.empty?
+        # :fixed: $group is last, so its output can't be paged; more than max_limit groups is an error, not a
+        # silently shortened answer. One extra row tells.
+        relation = relation.limit(max_limit + 1) if fixed? && max_limit
 
-        select_rows(relation).map do |row|
+        rows = select_rows(relation)
+        if fixed? && max_limit && rows.size > max_limit
+          raise QueryError, "$group gives more than #{max_limit} groups (max_limit): narrow it with a $match first, " \
+                            "or group by fewer values"
+        end
+
+        rows.map do |row|
           values = paths.each_with_index.to_h { |path, i| [path, read(resolved[i], row[i])] }
           aggregates.each_with_index { |(key, (_, caster)), i| values[key] = cast_aggregate(caster, row[paths.size + i]) }
           values

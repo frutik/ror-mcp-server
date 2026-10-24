@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `:fixed`: `max_limit` caps every query, also when `default_limit` is nil; it used to cap only an explicit or
+  default limit. A `$group` with more than `max_limit` groups is refused with an error instead of returning them
+  all (its output can't be paged, so cutting it short would look complete).
 - Docs and the collection generator write `instructions` as a quoted heredoc (`<<~'TXT'`): in an interpolating
   one, Ruby reads `#$name` / `#@name` in pipeline examples as variables and the text silently loses them.
 - `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now

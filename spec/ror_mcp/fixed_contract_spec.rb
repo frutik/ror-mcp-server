@@ -6,7 +6,8 @@
 #   rows    — whatever the pipeline, a client sees only rows the collection's
 #             scope publishes (ActiveRecord's own answer for that scope);
 #   fields  — only the collection's `fields` can be read, filtered, sorted or grouped;
-#   ceiling — no query returns more than `max_limit` rows.
+#   ceiling — no query returns more than `max_limit` rows; a $group that would
+#             (its output can't be paged) is refused.
 #
 # A combination that fails because of a known open issue is marked pending with
 # its SECURITY_AUDIT id; RSpec fails it once it starts passing, so fixing the
@@ -163,21 +164,30 @@ RSpec.describe "fixed semantics contract" do
       "$group without accumulators" => [:customers, [{ "$group" => { "_id" => { "i" => "$id" } } }]],
       "$lookup, $group" => [:orders, [c, { "$group" => { "_id" => "$c.name", "k" => { "$sum" => 1 } } }]],
     }
-    known_ceiling = {
-      "$group by a field" => "F8: $group output has no row limit",
-      "$group without accumulators" => "F8: $group output has no row limit",
-      "$lookup, $group" => "F8: $group output has no row limit",
-    }
+
+    # The rows a query returns, or nil when it is refused for exceeding max_limit.
+    def capped(collection, pipeline)
+      rows(collection, pipeline)
+    rescue RorMcp::Pipeline::QueryError => e
+      raise unless e.message.include?("max_limit")
+    end
 
     pipelines.each do |label, (queried, pipeline)|
-      it "returns at most max_limit rows for #{label}", **pending_if(known_ceiling[label]) do
-        expect(rows(public_send(queried), pipeline).size).to be <= 1
+      it "returns at most max_limit rows for #{label}" do
+        result = capped(public_send(queried), pipeline)
+        expect(result.size).to be <= 1 if result
       end
     end
 
-    it "returns at most max_limit rows when default_limit is nil", pending: "F8: max_limit only caps a limit that is already set" do
+    it "returns at most max_limit rows when default_limit is nil" do
       RorMcp.configuration.default_limit = nil
-      expect(rows(customers, []).size).to be <= 1
+      expect(rows(customers, []).size).to eq(1)
+    end
+
+    it "answers a $group that fits within max_limit" do
+      expect(rows(customers, [{ "$group" => { "_id" => nil, "k" => { "$sum" => 1 } } }])).to eq([{ "k" => 3 }])
+      expect(rows(customers, [{ "$match" => { "name" => "Anna" } }, { "$group" => { "_id" => "$name", "k" => { "$sum" => 1 } } }]))
+        .to eq([{ "name" => "Anna", "k" => 1 }])
     end
   end
 end
