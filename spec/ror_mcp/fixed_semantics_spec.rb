@@ -88,6 +88,50 @@ RSpec.describe "fixed semantics" do
       expect(rows([lookup, { "$match" => { "c.name" => "Gijs" } }])).to eq([])
     end
 
+    context "with two collections over one model" do
+      before do
+        define_collection("Products") { model ShopDb::Product; collection_name "product"; fields :sku, :category }
+        define_collection("PublicCategories") { model ShopDb::Category; collection_name "public_category"; fields :id, :parent }
+        define_collection("PrivateCategories") do
+          model ShopDb::Category
+          collection_name "private_category"
+          fields :id, :name, :parent
+
+          def scope(_context) = ShopDb::Category.where(id: 2)
+        end
+      end
+
+      let(:hidden_name) { [{ "$match" => { "sku" => "CAF-1" } }, { "$project" => { "sku" => 1, "name" => "$private.name" } }] }
+
+      it "keeps the private collection's scope on its own join" do
+        # CAF-1 is in category 1, which the private collection does not publish.
+        expect(rows([lookup("category", from: "private_category", as: "private")] + hidden_name, Products))
+          .to eq([{ "sku" => "CAF-1", "name" => nil }])
+      end
+
+      it "refuses to rebind a reference an earlier $lookup already joined" do
+        # A chained lookup joins `category` with the public collection's rows; rebinding
+        # it to the private collection would read those rows under the private fields.
+        pipeline = [lookup("category", from: "public_category", as: "public"),
+                    lookup("public.parent", from: "public_category", as: "parent"),
+                    lookup("category", from: "private_category", as: "private")] + hidden_name
+        expect { rows(pipeline, Products) }
+          .to raise_error(RorMcp::Pipeline::QueryError, /'category' already joins the 'public_category' collection/)
+        expect { rows([lookup("category__parent", from: "public_category", as: "parent"),
+                       lookup("category", from: "private_category", as: "private")] + hidden_name, Products) }
+          .to raise_error(RorMcp::Pipeline::QueryError, /'category' already joins the 'public_category' collection/)
+      end
+
+      it "refuses two collections for one reference, and allows one collection under two aliases" do
+        expect { rows([lookup("category", from: "public_category", as: "public"),
+                       lookup("category", from: "private_category", as: "private")], Products) }
+          .to raise_error(RorMcp::Pipeline::QueryError, /already joins the 'public_category'/)
+        result = rows([lookup("category", from: "private_category", as: "a"), lookup("category", from: "private_category", as: "b"),
+                       { "$match" => { "sku" => "LAP-1" } }, { "$project" => { "x" => "$a.name", "y" => "$b.id" } }], Products)
+        expect(result).to eq([{ "x" => ShopDb::Category.find(2).name, "y" => 2 }])
+      end
+    end
+
     it "resolves references to a published subclass (STI / proxy)" do
       vip = Class.new(ShopDb::Customer) { def self.name = "ShopDb::VipCustomer" }
       RorMcp.registry.clear

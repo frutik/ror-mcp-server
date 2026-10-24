@@ -255,7 +255,7 @@ set with `collection_name`.
 | `$match` | Filters. A literal value means equality. Operators: `$eq $ne $gt $gte $lt $lte $in $nin $regex`, `$and $or $nor`, and any operator a collection enables with `extra_filters`. `null` matches NULL. `_id` is the primary key. |
 | `$match: {$text: {$search: "…"}}` | Full-text search: every word must match at least one search field, case-insensitively. |
 | `$search: {text: {query, path?}}` | The same search, optionally limited to some search fields. |
-| `$lookup` | Joins a `belongs_to` target: `{from, localField, foreignField: "_id", as}`. Later stages use `as.field`. |
+| `$lookup` | Joins a `belongs_to` target: `{from, localField, foreignField: "_id", as}`. Later stages use `as.field`. A reference joins one collection per query: two `$lookup`s may share it only with the same `from`. |
 | `$sort` | `{field: 1}` ascending, `{field: -1}` descending. Lookup aliases work: `{"c.name": 1}`. |
 | `$skip` / `$limit` | Pagination, applied in pipeline order. |
 | `$project` | `{field: 1}` includes, `{field: 0}` excludes, `{"key": "$field"}` or `{"key": "$alias.field"}` renames. Dotted keys produce nested objects. |
