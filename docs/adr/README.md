@@ -17,9 +17,10 @@ gets a new ADR that supersedes the old one, and the old one's status says so.
 | [0006](0006-rubocop-to-the-existing-style.md) | RuboCop, configured to the existing style | Accepted |
 | [0007](0007-fixed-semantics-contract-spec.md) | Test `:fixed` with a contract spec; known failures are pending by issue id | Accepted |
 | [0008](0008-django-differences-in-development-md.md) | Differences from django-mcp-server live in DEVELOPMENT.md | Accepted |
-| [0009](0009-security-findings-stay-private-until-fixed.md) | Security findings stay out of the repository until fixed | Accepted |
+| [0009](0009-security-findings-stay-private-until-fixed.md) | Security findings stay out of the repository until fixed | Superseded by 0015 |
 | [0010](0010-group-over-max-limit-is-refused.md) | A `$group` over `max_limit` groups is refused, not cut short | Accepted |
 | [0011](0011-same-database-means-same-connection-class.md) | Same database means same connection class | Accepted |
 | [0012](0012-validate-origin-in-the-endpoint.md) | Validate `Origin` in the endpoint: own origin and a list | Accepted |
 | [0013](0013-bound-sessions-and-request-bodies.md) | Bound sessions and request bodies at the endpoint | Accepted |
 | [0014](0014-primary-keys-are-always-addressable.md) | Primary keys are always addressable | Accepted |
+| [0015](0015-security-reports-are-never-published.md) | Security review reports are never published | Accepted |

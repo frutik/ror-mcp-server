@@ -1,6 +1,6 @@
 # 9. Security findings stay out of the repository until fixed
 
-Date: 2026-10-24 · Status: Accepted
+Date: 2026-10-24 · Status: Superseded by [0015](0015-security-reports-are-never-published.md)
 
 ## Context
 
