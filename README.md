@@ -362,7 +362,7 @@ end
 | `output_format`, `output_as_resource` | See [Output formats](#output-formats). |
 | `connects_to`, `routing_field` | See [Multiple databases and sharding](#multiple-databases-and-sharding). |
 | `abstract!` | A shared base class, never published itself; subclasses inherit its settings. |
-| `scope(context)` | The relation queries start from. `context` is what `authenticate` returned. A `$lookup` into this collection sees the same rows. |
+| `scope(context)` | The relation queries start from. `context` is what `authenticate` returned. A `$lookup` into this collection sees the same rows. A `limit` or `offset` in it bounds the rows too: pipeline stages filter, sort and page within them. |
 
 The schema comes from the model: column types become `bsonType`, `belongs_to` becomes a
 reference to the target collection, `enum` becomes `enum`, and non-null columns become

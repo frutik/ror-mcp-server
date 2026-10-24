@@ -61,17 +61,8 @@ RSpec.describe "fixed semantics contract" do
                                                         { "$project" => { "i" => "$b.id", "n" => "$b.name" } }]]],
   }
 
-  # [scope, path] → why it fails today.
+  # [scope, path] → why it fails today (none at the moment).
   known = {}
-  ["a direct query", "$match on the key", "$match on a field", "$sort", "$skip", "$sort, $limit"].each do |path|
-    ["a limit", "limit(0)"].each { |scope| known[[scope, path]] = "F5: client stages replace the scope's limit" }
-  end
-  known[["an offset", "$sort"]] = "F5: $sort reorders rows before the scope's offset applies"
-  # $group drops the scope's ORDER BY but keeps its OFFSET, so the offset skips whichever group the
-  # database returns first. SQLite and MySQL return groups in key order, which hides it.
-  if ShopDb.url.to_s.start_with?("postgres")
-    known[["an offset", "$group with a count"]] = "F5: the scope's offset applies to $group output, in no fixed order"
-  end
 
   let!(:customers) do
     define_collection("ContractCustomers") do
