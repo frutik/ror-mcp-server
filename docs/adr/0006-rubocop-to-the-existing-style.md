@@ -23,4 +23,5 @@ pull request.
 - Catches real bugs (Lint), not taste. A tightened style would need its own decision and a separate,
   mechanical change.
 - Autocorrect output still needs review; the config disables the cops whose corrections were harmful.
-- Making the check required for merging is a separate repository setting, not yet done.
+- RuboCop is a required check for merging into `main`, with the spec and parity jobs (ruleset
+  "main: required checks", added with 0.1.2; admins can bypass).
