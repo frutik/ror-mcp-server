@@ -52,7 +52,8 @@ RSpec.describe "fixed semantics" do
     end
 
     it "refuses fields outside the whitelist in every stage" do
-      expect { rows([{ "$match" => { "metadata" => nil } }]) }.to raise_error(/Cannot resolve keyword 'metadata'.*Choices are: customer, customer_id, id, number, status, total$/)
+      expect { rows([{ "$match" => { "metadata" => nil } }]) }
+        .to raise_error(/Cannot resolve keyword 'metadata'.*Choices are: customer, customer_id, id, number, status, total$/)
       expect { rows([{ "$sort" => { "placed_at" => 1 } }]) }.to raise_error(/'placed_at'/)
       expect { rows([{ "$project" => { "x" => "$billing_identity" } }]) }.to raise_error(/'billing_identity'/)
     end
@@ -256,11 +257,11 @@ RSpec.describe "fixed semantics" do
     end
 
     it "requires the routing field and refuses it anywhere but a $match equality" do
-      expect(query([])[:content].first[:text]).to match(/'region' is a routing field and is required/)
-      expect(query([{ "$match" => { "region" => "mars" } }])[:content].first[:text]).to match(/No database for region "mars"/)
-      expect(query([{ "$match" => { "region" => { "$in" => ["eu"] } } }])[:content].first[:text]).to match(/compare it with one value/)
+      expect(query([])[:content].first[:text]).to include("'region' is a routing field and is required")
+      expect(query([{ "$match" => { "region" => "mars" } }])[:content].first[:text]).to include('No database for region "mars"')
+      expect(query([{ "$match" => { "region" => { "$in" => ["eu"] } } }])[:content].first[:text]).to include("compare it with one value")
       expect(query([{ "$match" => { "region" => "eu" } }, { "$sort" => { "region" => 1 } }])[:content].first[:text])
-        .to match(/'region' is a routing field: it selects the database/)
+        .to include("'region' is a routing field: it selects the database")
     end
 
     it "publishes the routing field and leaves out references into another database" do
@@ -301,7 +302,7 @@ RSpec.describe "fixed semantics" do
       subscriber = ActiveSupport::Notifications.subscribe("query.ror_mcp") { |*, payload| notified << payload }
       RorMcp::Executor.new(collections, server: :default, semantics: :fixed).call("order", [{ "$match" => { "nope" => 1 } }])
       expect(events.first.to_h).to include(name: "query.ror_mcp", server: :default, collection: "order")
-      expect(events.first.error).to match(/Cannot resolve keyword 'nope'/)
+      expect(events.first.error).to include("Cannot resolve keyword 'nope'")
       expect(notified.first[:collection]).to eq("order")
     ensure
       ActiveSupport::Notifications.unsubscribe(subscriber)

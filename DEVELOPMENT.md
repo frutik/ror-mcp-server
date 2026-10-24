@@ -88,6 +88,7 @@ On macOS, Homebrew's Ruby lives at `/opt/homebrew/opt/ruby/bin`. The repo root a
 ```sh
 bundle exec rspec                                     # SQLite in memory
 bundle exec rspec spec/ror_mcp/pipeline/compiler_spec.rb:40
+bundle exec rubocop                                   # lint (CI runs it); -a fixes the safe ones
 
 RORMCP_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/ror_mcp_test bundle exec rspec
 RORMCP_TEST_DATABASE_URL=trilogy://root@127.0.0.1:3306/ror_mcp_test bundle exec rspec

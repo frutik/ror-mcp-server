@@ -52,7 +52,7 @@ RSpec.describe RorMcp do
   after { described_class.reset! }
 
   it "builds each server once, so sessions survive between requests" do
-    expect(described_class.server(:default)).to be(described_class.server(:default))
+    expect(described_class.server(:default)).to be(described_class.server(:default)) # rubocop:disable RSpec/IdenticalEqualityAssertion
   end
 
   it "rebuilds servers after configure" do

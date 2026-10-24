@@ -45,14 +45,13 @@ module RorMcp
         case value
         when Hash then "{#{value.map { |k, v| "#{string(k.to_s)}:#{encode(v)}" }.join(',')}}"
         when Array then "[#{value.map { |v| encode(v) }.join(',')}]"
-        when PyDecimal then float(value.to_f)
         when String then string(value)
         when Symbol then string(value.to_s)
         when nil then "null"
         when true then "true"
         when false then "false"
         when Integer then value.to_s
-        when BigDecimal then float(value.to_f)
+        when BigDecimal, PyDecimal then float(value.to_f)
         when Float then float(value)
         when Time, DateTime then string(datetime(value))
         when Date then string(value.iso8601)

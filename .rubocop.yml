@@ -1,0 +1,97 @@
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "vendor/**/*"
+    - "gemfiles/vendor/**/*"
+    - "django-mcp-server/**/*"
+    # The dummy app's Rails boilerplate; its app/ (the DSL mirror) is linted.
+    - "spec/dummy/{bin,config,db,vendor}/**/*"
+    - "spec/dummy/{Gemfile,Rakefile,config.ru}"
+    - "spike/**/*"
+    - "audit/**/*"
+    - "lib/ror_mcp/tools/query_tool_text.rb" # generated
+
+# House style: the code as written.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: single_quotes
+Style/Semicolon:
+  AllowAsExpressionSeparator: true # one-line collection definitions in specs
+Style/Documentation:
+  Enabled: false
+Layout/LineLength:
+  Max: 160
+  AutoCorrect: false # it breaks lines in odd places; break long ones by hand
+
+# Left to the author: trailing commas, guard form, lambda and argument style vary on purpose.
+Style/TrailingCommaInArguments:
+  Enabled: false
+Style/TrailingCommaInArrayLiteral:
+  Enabled: false
+Style/TrailingCommaInHashLiteral:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: false
+Style/Lambda:
+  Enabled: false
+Style/ArgumentsForwarding:
+  Enabled: false
+Bundler/OrderedGems:
+  Enabled: false
+Gemspec/OrderedDependencies:
+  Enabled: false
+
+# The compiler mirrors django-mcp-server's long functions; size cops would only
+# push it into indirection. Correctness cops (Lint, Security) stay on.
+Metrics:
+  Enabled: false
+
+RSpec/MultipleExpectations:
+  Enabled: false
+RSpec/ExampleLength:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Exclude:
+    - "spec/dummy/**/*" # a Rails app, as Rails generates them
+
+# `validate!` returns true for chaining; `a`/`b` read fine in comparisons.
+Naming/PredicateMethod:
+  Enabled: false
+Naming/MethodParameterName:
+  AllowedNames: [a, b, x, y, io, id, to, as, op]
+Style/OneClassPerFile:
+  Enabled: false # lookups.rb reopens Lookups for its SQL helpers
+Naming/FileName:
+  Exclude:
+    - "lib/ror-mcp-server.rb" # lets Bundler.require load the gem by its name
+
+# spec/dummy/app/mcp is application code: `describe :field` there is the collection DSL.
+RSpec:
+  Include:
+    - "spec/**/*_spec.rb"
+# Specs are organised by behaviour ("fixed semantics", "generators"), not one class per file,
+# and `let!` registers collections the examples reach through the registry.
+RSpec/DescribeClass:
+  Enabled: false
+RSpec/MultipleDescribes:
+  Enabled: false
+RSpec/SpecFilePathFormat:
+  Enabled: false
+RSpec/LetSetup:
+  Enabled: false
+RSpec/DescribeSymbol:
+  Enabled: false
+RSpec/InstanceVariable:
+  Exclude:
+    - "spec/ror_mcp/generators_spec.rb" # a tmpdir set in an around hook
+Layout/FirstArrayElementIndentation:
+  EnforcedStyle: consistent
+Style/FetchEnvVar:
+  Enabled: false

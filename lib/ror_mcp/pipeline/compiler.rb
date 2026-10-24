@@ -360,7 +360,7 @@ module RorMcp
 
         rows.map do |row|
           out = {}
-          aggregates.each { |key, _| assign(out, key.split("."), row[key]) }
+          aggregates.each { |(key, _)| assign(out, key.split("."), row[key]) }
           keys.each { |output, path| assign(out, output.split("."), row[path]) }
           out
         end
@@ -374,7 +374,7 @@ module RorMcp
 
         op, arg = spec.first
         reference = arg.is_a?(String) && arg.start_with?("$") ? @fields.resolve(@lookups.translate(arg.delete_prefix("$"))) : nil
-        count_all = arg == 1 || arg == true
+        count_all = [1, true].include?(arg)
         case op
         when "$sum"
           return [Arel.star.count, :integer] if count_all

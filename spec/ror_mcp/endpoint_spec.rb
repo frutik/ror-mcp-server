@@ -14,6 +14,7 @@ RSpec.describe RorMcp::Endpoint do
       map("/mcp") { run RorMcp.endpoint }
     end
   end
+  let(:auth) { { "Authorization" => "Bearer s3cret" } }
 
   before do
     RorMcp.reset!
@@ -25,7 +26,7 @@ RSpec.describe RorMcp::Endpoint do
 
     RorMcp.server(:default).add_tool(MCP::Tool.define(
       name: "add", description: "Add two integers.",
-      input_schema: { properties: { a: { type: "integer" }, b: { type: "integer" } }, required: ["a", "b"] },
+      input_schema: { properties: { a: { type: "integer" }, b: { type: "integer" } }, required: %w[a b] },
     ) { |a:, b:| MCP::Tool::Response.new([{ type: "text", text: (a + b).to_s }]) })
     RorMcp.server(:default).add_tool(MCP::Tool.define(name: "explode", description: "Fails.") { raise ArgumentError, "boom" })
     RorMcp.server(:default).add_tool(MCP::Tool.define(name: "embedded_resource", description: "Resource.") do
@@ -40,8 +41,6 @@ RSpec.describe RorMcp::Endpoint do
   end
 
   after { RorMcp.reset! }
-
-  let(:auth) { { "Authorization" => "Bearer s3cret" } }
 
   def rpc(path, method, params = nil, session: nil, headers: {}, id: 1)
     payload = { jsonrpc: "2.0", method: method }
@@ -155,7 +154,7 @@ RSpec.describe RorMcp::Endpoint do
     # FastMCP answers both with isError results; RorMcp::Toolset bridges this in M5.
     it "turns an exception into a JSON-RPC error that hides the message (SDK behaviour)" do
       response = call_tool("explode")
-      expect(response.dig("error", "code")).to eq(-32603)
+      expect(response.dig("error", "code")).to eq(-32_603)
       expect(response.to_json).not_to include("boom")
     end
   end
