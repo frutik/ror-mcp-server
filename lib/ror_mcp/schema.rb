@@ -55,10 +55,13 @@ module RorMcp
       end
     end
 
+    # One database = one connection owner: the class whose connection both
+    # models use (Rails files ApplicationRecord's under ActiveRecord::Base).
+    # Roles, replicas and shards are switches within one owner. Adapter and
+    # database names prove nothing: two hosts, or two SQLite :memory:
+    # databases, share them. Needs no live connection, and never guesses "same".
     def same_database?(a, b)
-      a.connection_db_config.then { |x| [x.adapter, x.database] } == b.connection_db_config.then { |x| [x.adapter, x.database] }
-    rescue ActiveRecord::ConnectionNotEstablished
-      true
+      a.connection_specification_name == b.connection_specification_name
     end
 
     def published_models_for(collection)
