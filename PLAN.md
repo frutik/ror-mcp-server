@@ -234,6 +234,7 @@ or hazards. Fixed mode is the default for new apps and documented as such.
 | `$skip` applied after `$limit` | reproduce | stages applied in order (MongoDB semantics) |
 | `$project: {f: 0}` ignored | reproduce | exclusion projection supported |
 | `$sum: 1` / `$count: 1` → `Count("id")` | `COUNT(*)` (same result whenever `id` exists; fixes non-`id` PKs) | same |
+| `{"$count": {}}` (MongoDB's form) refused | reproduce | `COUNT(*)`, like `$count: 1` |
 | No default/maximum limit | `default_limit: nil` | `default_limit` + `max_limit` enforced; `max_limit` caps rows even without `default_limit`, and a `$group` over `max_limit` groups is refused (ADR 0010) |
 | Empty result → raw `[]` | reproduce | rendered `[]` (one text content) |
 

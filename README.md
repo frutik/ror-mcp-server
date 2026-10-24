@@ -259,7 +259,7 @@ set with `collection_name`.
 | `$sort` | `{field: 1}` ascending, `{field: -1}` descending. Lookup aliases work: `{"c.name": 1}`. |
 | `$skip` / `$limit` | Pagination, applied in pipeline order. |
 | `$project` | `{field: 1}` includes, `{field: 0}` excludes, `{"key": "$field"}` or `{"key": "$alias.field"}` renames. Dotted keys produce nested objects. |
-| `$group` | Last stage. `_id` is `null`, `"$field"` or `{key: "$field", …}`. Accumulators: `$sum $avg $min $max $count`. |
+| `$group` | Last stage. `_id` is `null`, `"$field"` or `{key: "$field", …}`. Accumulators: `$sum $avg $min $max $count`. `$sum`/`$count` take `1` (rows) or `"$field"`; `$count` also takes MongoDB's `{}`. |
 
 Any other stage (`$unwind`, `$addFields`, …) is rejected with an error explaining what's
 supported. Errors come back as tool errors, written for the client to correct its query.

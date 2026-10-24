@@ -223,6 +223,14 @@ RSpec.describe "fixed semantics" do
       expect(ids([{ "$sort" => { "id" => 1 } }])).to eq([1, 2])
     end
 
+    it "takes MongoDB's {\"$count\": {}} as well as 1" do
+      by_status = ->(count) { rows([{ "$group" => { "_id" => "$status", "n" => { "$count" => count } } }]).sort_by { |r| r["status"] } }
+      expect(by_status.call({})).to eq(by_status.call(1))
+      expect(rows([{ "$group" => { "_id" => nil, "n" => { "$count" => {} } } }])).to eq([{ "n" => 4 }])
+      expect { rows([{ "$group" => { "_id" => nil, "n" => { "$count" => { "x" => 1 } } } }]) }
+        .to raise_error(RorMcp::Pipeline::QueryError, /\$count only supports/)
+    end
+
     it "refuses a $group with more groups than max_limit, rather than cut it short" do
       orders.max_limit 3
       by_status = { "$group" => { "_id" => "$status", "n" => { "$sum" => 1 } } }
