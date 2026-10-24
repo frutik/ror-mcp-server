@@ -47,6 +47,9 @@ module RorMcp
         prefix = @aliases.fetch(alias_name) do
           raise QueryError, "Unknown lookup alias '#{alias_name}', ensure it appears in the 'as' field of a previous $lookup"
         end
+        # :fixed: "alias._id" is the joined collection's primary key, as "_id" is the base's
+        # (django-mcp-server only translates a bare "_id", so the alias form fails there).
+        rest = "pk" if rest == "_id" && @catalog.fixed?
         "#{prefix}__#{rest}"
       end
 

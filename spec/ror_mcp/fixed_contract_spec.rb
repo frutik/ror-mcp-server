@@ -129,25 +129,35 @@ RSpec.describe "fixed semantics contract" do
       end
     end
 
-    # F7 is a decision as much as a bug (a reference such as order.customer shows
-    # the keys anyway): if primary keys are declared always addressable, replace
-    # these with a spec saying so. `$c._id` is already refused, `$c.pk` is not.
-    key_attempts = {
-      "$project $_id" => [:customers, { "$project" => { "x" => "$_id" } }],
-      "$project $pk" => [:customers, { "$project" => { "x" => "$pk" } }],
-      "$match _id" => [:customers, { "$match" => { "_id" => 1 } }],
-      "$sort _id" => [:customers, { "$sort" => { "_id" => 1 } }],
-      "$lookup, $project $c._id" => [:orders, c, { "$project" => { "x" => "$c._id" } }],
-      "$lookup, $project $c.pk" => [:orders, c, { "$project" => { "x" => "$c.pk" } }],
+    # Primary keys are always addressable as `_id` and `pk`, even when `fields` leaves them out
+    # (ADR 0014): a reference such as order.customer shows them anyway, and joins need them.
+    # `fields` still decides the column name, rows without $project, and the schema.
+    # label → [queried collection, pipeline, keys it yields]
+    keys = {
+      "$project $_id" => [:customers, [{ "$project" => { "x" => "$_id" } }], ids],
+      "$project $pk" => [:customers, [{ "$project" => { "x" => "$pk" } }], ids],
+      "$match _id" => [:customers, [{ "$match" => { "_id" => 3 } }, { "$project" => { "x" => "$_id" } }], [3]],
+      "$group by _id" => [:customers, [{ "$group" => { "_id" => "$_id", "n" => { "$sum" => 1 } } }], ids],
+      "$lookup, $project $c._id" => [:orders, [c, { "$project" => { "x" => "$c._id" } }], ids],
+      "$lookup, $project $c.pk" => [:orders, [c, { "$project" => { "x" => "$c.pk" } }], ids],
     }
-    refused_today = ["$lookup, $project $c._id"]
 
-    key_attempts.each do |label, (queried, *pipeline)|
-      reason = "F7: _id/pk resolve without the field whitelist" unless refused_today.include?(label)
-      it "refuses the primary key of a collection that leaves it out of `fields`, in #{label}", **pending_if(reason) do
+    keys.each do |label, (queried, pipeline, expected)|
+      it "addresses the primary key of a collection that leaves it out of `fields`, in #{label}" do
         customers.fields :name
-        expect { rows(public_send(queried), pipeline) }.to raise_error(RorMcp::Pipeline::QueryError)
+        values = rows(public_send(queried), pipeline).map { |row| row["x"] || row["_id"] }
+        expect(values.uniq.sort).to eq(expected)
       end
+    end
+
+    it "keeps the key's column name, rows without $project and the schema to `fields`" do
+      customers.fields :name
+      expect { rows(customers, [{ "$project" => { "x" => "$id" } }]) }.to raise_error(RorMcp::Pipeline::QueryError, /'id'/)
+      to_customer = { "$lookup" => { "from" => "customer", "localField" => "customer", "foreignField" => "_id", "as" => "c" } }
+      expect { rows(orders, [to_customer, { "$project" => { "x" => "$c.id" } }]) }.to raise_error(RorMcp::Pipeline::QueryError, /'id'/)
+      expect(rows(customers, []).flat_map(&:keys).uniq).to eq(["name"])
+      catalog = RorMcp::Pipeline::Catalog.new(customers, RorMcp.registry.collections_for(:default), semantics: :fixed)
+      expect(RorMcp::Schema.json_schema(customers, [], catalog: catalog).dig("$jsonSchema", "properties").keys).to eq(["name"])
     end
   end
 

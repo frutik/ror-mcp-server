@@ -180,7 +180,7 @@ against django-mcp-server) or corrects them (`:fixed`, the default):
 | django-mcp-server behaviour | `:parity` | `:fixed` |
 |---|---|---|
 | No `$project` returns **all** columns, including ones outside `fields` | reproduced | only `fields` + computed |
-| Filters, sorts and projections reach columns outside `fields` | reproduced | refused |
+| Filters, sorts and projections reach columns outside `fields` | reproduced | refused, except the primary key as `_id`/`pk` (ADR 0014) |
 | `alias.field` after `$lookup` reaches any column of the joined model | reproduced | only the target collection's `fields` |
 | The joined collection's `scope` is ignored | reproduced | applied to the join |
 | Two `$lookup`s on one reference with different `from` both read one join, and neither scope applies | reproduced | refused: one collection per reference (several aliases for it are fine) |
