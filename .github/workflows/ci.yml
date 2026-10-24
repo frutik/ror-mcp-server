@@ -4,8 +4,26 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 5 * * 1"   # weekly, so new advisories surface without a push
+
+permissions:
+  contents: read
 
 jobs:
+  audit:
+    # Known vulnerabilities in the locked gems (ruby-advisory-db).
+    name: bundler-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - run: gem install bundler-audit
+      - run: bundle-audit check --update --gemfile-lock Gemfile.lock
+      - run: bundle-audit check --gemfile-lock spec/dummy/Gemfile.lock
+
   specs:
     name: specs (Ruby ${{ matrix.ruby }}, Rails ${{ matrix.rails }}, ${{ matrix.db }})
     runs-on: ubuntu-latest

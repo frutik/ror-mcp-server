@@ -116,6 +116,15 @@ compared, how to re-record, and the per-database recordings.
   recordings, plus `ror_mcp:check`. CI needs no Python dependencies and no Django: the
   recordings are committed.
 
+### Security scanning
+
+Free for this public repo, all on: secret scanning with push protection, Dependabot alerts
+and security-update PRs, weekly Dependabot version updates (gems in `/` and `spec/dummy`,
+GitHub Actions), CodeQL code scanning (Ruby, Python, Actions; default setup, extended
+queries), `bundler-audit` in CI (also weekly), OpenSSF Scorecard (`.github/workflows/scorecard.yml`),
+and private vulnerability reporting ([SECURITY.md](SECURITY.md)). The Python reference
+app's pins are deliberately excluded from version updates; see `.github/dependabot.yml`.
+
 ---
 
 ## How the port is verified

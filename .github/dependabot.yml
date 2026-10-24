@@ -1,0 +1,25 @@
+# Weekly version-update PRs. Security updates for every ecosystem (including the
+# Python reference app) come from Dependabot alerts, enabled in the repo settings.
+# spec/parity/requirements.txt is deliberately not here: Django 5.2 and mcp 1.30
+# are the parity baseline (mcp 2.x breaks django-mcp-server). The
+# django-mcp-server submodule is pinned to the baseline commit for the same reason.
+version: 2
+updates:
+  - package-ecosystem: bundler
+    directory: "/"
+    schedule: { interval: weekly }
+    groups:
+      gem-dependencies:
+        update-types: [minor, patch]
+  - package-ecosystem: bundler
+    directory: "/spec/dummy"
+    schedule: { interval: weekly }
+    groups:
+      dummy-app:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }
+    groups:
+      actions:
+        patterns: ["*"]
