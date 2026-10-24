@@ -28,6 +28,8 @@ module RorMcp
                   :max_limit,          # upper bound on $limit (collections can lower it with max_limit)
                   # Characters of a server's query_data_collections description; nil = no check.
                   :description_budget
+    # Bytes of a POST body; larger requests get 413. nil = no bound (the SDK still caps at 4 MiB).
+    attr_reader :max_request_bytes
 
     def initialize
       @servers = {}
@@ -44,7 +46,16 @@ module RorMcp
       @query_subscribers = []
       @tool_subscribers = []
       @allowed_origins = []
+      @max_request_bytes = 4 * 1024 * 1024
       default_server
+    end
+
+    def max_request_bytes=(bytes)
+      unless bytes.nil? || (bytes.is_a?(Integer) && bytes.positive?)
+        raise ConfigurationError, "max_request_bytes must be a positive Integer or nil, got #{bytes.inspect}"
+      end
+
+      @max_request_bytes = bytes
     end
 
     def allowed_origins=(origins)

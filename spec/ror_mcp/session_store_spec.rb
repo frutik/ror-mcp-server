@@ -24,6 +24,29 @@ RSpec.describe RorMcp::SessionStore do
     subject(:store) { described_class.new }
 
     it_behaves_like "a session store"
+
+    it "expires sessions" do
+      now = 0
+      store = described_class.new(expires_in: 60, clock: -> { now })
+      id = store.create
+      now = 59
+      expect(store.exists?(id)).to be(true)
+      now = 60
+      expect(store.exists?(id)).to be(false)
+      expect(store.size).to eq(0)
+    end
+
+    it "drops expired sessions as new ones arrive, and the oldest past max" do
+      now = 0
+      store = described_class.new(expires_in: 60, max: 3, clock: -> { now })
+      first, second, third = Array.new(3) { store.create.tap { now += 1 } }
+      fourth = store.create
+      expect([first, second, third, fourth].map { |id| store.exists?(id) }).to eq([false, true, true, true])
+      expect(store.size).to eq(3)
+      now = 1000
+      store.create
+      expect(store.size).to eq(1)
+    end
   end
 
   describe RorMcp::SessionStore::Cache do
