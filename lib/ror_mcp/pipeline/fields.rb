@@ -23,6 +23,7 @@ module RorMcp
         @pseudo = pseudo # name → message, for routing fields
         @bound = {}      # path → collection a $lookup named for it
         @joins = {}      # path → Arel join node, in the order paths were first used
+        @joined = {}     # path → collection its join reads (kept across reset_joins)
         @fields = Hash.new { |cache, klass| cache[klass] = index(Schema.model_fields(klass)) }
       end
 
@@ -31,8 +32,16 @@ module RorMcp
         Schema.model_fields(@model)
       end
 
-      # A $lookup (`:fixed`) names the collection a path's join uses.
+      # A $lookup (`:fixed`) names the collection a path's join uses. One path
+      # joins one collection: the join is built once, so a second collection
+      # would have its fields checked against rows the first one's scope chose.
       def bind(path, collection)
+        current = @bound[path] || @joined[path]
+        if current && current != collection
+          raise QueryError, "$lookup from '#{collection.collection_name}': '#{path.gsub('__', '.')}' already joins " \
+                            "the '#{current.collection_name}' collection, and a reference joins one collection per query"
+        end
+
         @bound[path] = collection
       end
 
@@ -57,7 +66,7 @@ module RorMcp
           end
 
           nullable ||= field.column.null
-          table = join(prefix, table, field.reflection, @catalog.join_scope(target))
+          table = join(prefix, table, field.reflection, target)
           model = field.reflection.klass
           collection = target
         end
@@ -129,7 +138,9 @@ module RorMcp
       # LEFT OUTER JOIN of a belongs_to target under an alias per path, so chains
       # and self-references get distinct tables. With a scope (`:fixed`), the
       # join reads the target's scoped rows: LEFT JOIN (SELECT … scope) alias.
-      def join(path, parent_table, reflection, scope)
+      def join(path, parent_table, reflection, collection)
+        @joined[path] ||= collection
+        scope = @catalog.join_scope(collection)
         alias_name = "#{JOIN_ALIAS_PREFIX}#{path}"
         target = reflection.klass.arel_table.alias(alias_name)
         source = scope ? Arel::Nodes::TableAlias.new(Arel::Nodes::Grouping.new(scope.arel), alias_name) : target
