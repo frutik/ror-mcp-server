@@ -162,6 +162,11 @@ RSpec.describe RorMcp::Pipeline::Compiler do
       expect(result).to contain_exactly({ "n" => 2, "_id" => { "country" => "BE" } }, { "n" => 2, "_id" => { "country" => "NL" } })
     end
 
+    it "refuses MongoDB's {\"$count\": {}}, as django-mcp-server does" do
+      expect { rows([{ "$group" => { "_id" => nil, "n" => { "$count" => {} } } }]) }
+        .to raise_error(RorMcp::Pipeline::QueryError, "$count only supports value 1 or a field reference.")
+    end
+
     it "averages decimals to 15 significant digits, like Django on SQLite" do
       expect(rows([{ "$group" => { "_id" => nil, "avg" => { "$avg" => "$total" } } }])).to eq([{ "avg" => 2388.95 }])
     end

@@ -402,7 +402,8 @@ module RorMcp
           node = { "$avg" => :average, "$min" => :minimum, "$max" => :maximum }.fetch(op)
           [reference.attribute.public_send(node), [node, reference]]
         when "$count"
-          return [Arel.star.count, :integer] if count_all
+          # :fixed also takes MongoDB's own form, {"$count": {}}.
+          return [Arel.star.count, :integer] if count_all || (fixed? && arg == {})
           raise QueryError, "$count only supports value 1 or a field reference." unless reference
 
           [reference.attribute.count, :integer]

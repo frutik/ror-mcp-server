@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `:fixed`: `$group` takes MongoDB's `{"$count": {}}` accumulator, counting rows like `{"$count": 1}`. `:parity`
+  keeps django-mcp-server's error.
+
 ## 0.1.2 — 2026-10-24
 
 Security fixes from a review of `:fixed` semantics, the read-only envelope and the HTTP endpoint, plus new
