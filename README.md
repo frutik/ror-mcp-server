@@ -334,9 +334,10 @@ class Sales::OrderCollection < RorMcp::Collection
   reference :customer, to: "customer"       # target collection, when it can't be inferred
   connects_to role: :reading                # role/shard for this collection's queries
 
-  instructions <<~TXT
+  instructions <<~'TXT'                     # quoted: examples like "#$query" stay literal
     One row per order. "status": pending, paid, shipped, cancelled.
     "customer" references the customer collection. Latest = highest id.
+    Orders per status: [{"$group": {"_id": "$status", "n": {"$sum": 1}}}]
   TXT
 
   def scope(context)                        # the rows this collection exposes
@@ -358,7 +359,7 @@ end
 | `reference` | Where a `belongs_to` points, when it can't be inferred. Subclasses (STI) are resolved automatically. |
 | `max_limit` | Upper bound on `$limit` for this collection. |
 | `description`, `describe`, `choice_labels` | Text for the schema. Defaults: `Model(field, …)`, the column comment, the humanized enum key. |
-| `instructions` | Extra text after the collection's schema in the tool description. |
+| `instructions` | Extra text after the collection's schema in the tool description. Write it as a quoted heredoc (`<<~'TXT'`): in `<<~TXT` or `"…"`, Ruby reads `#$name` and `#@name` in pipeline examples as variables, and the text silently loses them. |
 | `output_format`, `output_as_resource` | See [Output formats](#output-formats). |
 | `connects_to`, `routing_field` | See [Multiple databases and sharding](#multiple-databases-and-sharding). |
 | `abstract!` | A shared base class, never published itself; subclasses inherit its settings. |
