@@ -124,6 +124,12 @@ compared, how to re-record, and the per-database recordings.
 - **Parity:** the dummy app on each database × `:parity`/`:fixed`, checked against the
   recordings, plus `ror_mcp:check`. CI needs no Python dependencies and no Django: the
   recordings are committed.
+- **RuboCop.**
+
+RuboCop and every spec and parity job are required to merge into `main` (ruleset "main: required
+checks"; repository admins can bypass). The ruleset lists the jobs by name, so renaming a job or
+changing the matrix needs the same change there:
+`gh api repos/frutik/ror-mcp-server/rulesets` to find it, Settings → Rules → Rulesets to edit it.
 
 ### Security scanning
 
