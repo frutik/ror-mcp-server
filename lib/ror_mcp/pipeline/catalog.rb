@@ -71,13 +71,15 @@ module RorMcp
         collection ? collection.computed_fields : {}
       end
 
-      # The target's scope as a join condition (`:fixed` only).
+      # The target's scope as a join condition (`:fixed` only). The join reads
+      # the bare table only when the scope is provably every row: its SQL, less
+      # ORDER BY, is the unscoped table's. Anything else (where, joins, from,
+      # having, limit, offset, default scopes, STI) joins as a subquery.
       def join_scope(collection)
         return nil unless fixed? && collection
 
         relation = collection.new(@context).scope(@context)
-        trivial = relation.where_clause.empty? && relation.joins_values.empty? && relation.limit_value.nil?
-        trivial ? nil : relation
+        relation.except(:order).to_sql == relation.klass.unscoped.to_sql ? nil : relation
       end
 
       def same_database?(a, b)

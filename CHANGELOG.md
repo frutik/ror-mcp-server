@@ -5,6 +5,9 @@
 - `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now
   rejected. Such a query used to read one collection's rows under the other's fields, so a more restricted
   collection could expose rows its `scope` excludes. One collection under several aliases still works.
+- `:fixed`: a `$lookup` now applies the target collection's `scope` whenever it restricts rows. Scopes that did so
+  without a `where`, `joins` or `limit` on the relation (a `from` subquery, `offset`, `having`) were dropped, and the
+  join read the whole table.
 
 ## 0.1.1 — 2026-10-24
 
