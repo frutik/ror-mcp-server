@@ -117,14 +117,15 @@ RSpec.describe "fixed semantics" do
                     lookup("category", from: "private_category", as: "private")] + hidden_name
         expect { rows(pipeline, Products) }
           .to raise_error(RorMcp::Pipeline::QueryError, /'category' already joins the 'public_category' collection/)
-        expect { rows([lookup("category__parent", from: "public_category", as: "parent"),
-                       lookup("category", from: "private_category", as: "private")] + hidden_name, Products) }
+        chained = [lookup("category__parent", from: "public_category", as: "parent"),
+                   lookup("category", from: "private_category", as: "private")] + hidden_name
+        expect { rows(chained, Products) }
           .to raise_error(RorMcp::Pipeline::QueryError, /'category' already joins the 'public_category' collection/)
       end
 
       it "refuses two collections for one reference, and allows one collection under two aliases" do
-        expect { rows([lookup("category", from: "public_category", as: "public"),
-                       lookup("category", from: "private_category", as: "private")], Products) }
+        both = [lookup("category", from: "public_category", as: "public"), lookup("category", from: "private_category", as: "private")]
+        expect { rows(both, Products) }
           .to raise_error(RorMcp::Pipeline::QueryError, /already joins the 'public_category'/)
         result = rows([lookup("category", from: "private_category", as: "a"), lookup("category", from: "private_category", as: "b"),
                        { "$match" => { "sku" => "LAP-1" } }, { "$project" => { "x" => "$a.name", "y" => "$b.id" } }], Products)
