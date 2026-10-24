@@ -1,28 +1,21 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-10-24
 
-- Documented: a collection's primary key is always addressable as `_id` / `pk`, even when `fields` leaves it out
-  (`fields` decides whether rows and the schema show it). `:fixed`: `alias._id` after a `$lookup` now means the
-  joined collection's primary key, like `alias.pk`; it used to fail.
-- Sessions: a session id is issued only when `initialize` succeeds (a malformed one used to allocate a session that
-  never went away). `:memory` sessions now expire (14 days, like `:cache`) and are capped at 10,000, oldest first;
-  `SessionStore::Memory.new(expires_in:, max:)` sets other bounds.
-- New `c.max_request_bytes` (4 MiB): a larger POST body gets 413. The endpoint reads the body with that bound once,
-  before parsing; it used to read and parse the whole body to spot `initialize`, ahead of the SDK's own bound.
-- Endpoints validate `Origin`, as the MCP transport spec requires: a browser request from another origin gets 403
-  before authentication, for every method. Requests without `Origin` (non-browser clients) and from the server's
-  own origin pass. New `c.allowed_origins` (global, or `allowed_origins:` per server; `:any` turns it off). The
-  docs no longer claim Rails' `config.hosts` checks `Origin`; it checks `Host`.
-- `:fixed`: `max_limit` caps every query, also when `default_limit` is nil; it used to cap only an explicit or
-  default limit. A `$group` with more than `max_limit` groups is refused with an error instead of returning them
-  all (its output can't be paged, so cutting it short would look complete).
-- References and `$lookup` between collections now require the same connection class. The check compared only
-  adapter and database name, and answered "same" when a connection was missing, so two databases sharing a name
-  (two hosts, or SQLite `:memory:`) passed and the join read the queried database's same-named table. One check
-  now serves the schema and the compiler.
-- Docs and the collection generator write `instructions` as a quoted heredoc (`<<~'TXT'`): in an interpolating
-  one, Ruby reads `#$name` / `#@name` in pipeline examples as variables and the text silently loses them.
+Security fixes from a review of `:fixed` semantics, the read-only envelope and the HTTP endpoint, plus new
+settings for them. Upgrading from 0.1.1 needs no code change unless one of these applies:
+
+### Upgrading
+
+- A browser page on another origin now gets `403` (non-browser MCP clients send no `Origin` and are unaffected).
+  List browser apps in `c.allowed_origins`, or set `allowed_origins: :any` on a server.
+- `:fixed`: a `$group` with more than `max_limit` groups (1000 by default) is now an error; narrow it with `$match`.
+  `max_limit` also caps queries when `default_limit` is nil.
+- Two models joined through `$lookup` must share a connection class; models on separate connection classes no
+  longer join, even if their configuration names the same database.
+
+### Security
+
 - `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now
   rejected. Such a query used to read one collection's rows under the other's fields, so a more restricted
   collection could expose rows its `scope` excludes. One collection under several aliases still works.
@@ -32,12 +25,45 @@
 - A collection `scope` with `limit` or `offset` now bounds the collection's rows. Pipeline stages used to replace
   that window (`limit(0)` published every row, a `$match` reached rows past the limit); the scope is now a derived
   table that stages work inside, in both semantics.
+- References and `$lookup` between collections now require the same connection class. The check compared only
+  adapter and database name, and answered "same" when a connection was missing, so two databases sharing a name
+  (two hosts, or SQLite `:memory:`) passed and the join read the queried database's same-named table. One check
+  now serves the schema and the compiler.
 - Read-only tools: Rails' write check now applies even when `ActiveRecord::Base` has no connection (it used to be
   skipped along with the rest of the envelope). New `databases AnalyticsRecord, …` on a toolset: read-only tools
   also get a rolled-back read-only transaction on those databases, and a listed database without a connection
   fails the call.
+- `:fixed`: `max_limit` caps every query, also when `default_limit` is nil; it used to cap only an explicit or
+  default limit. A `$group` with more than `max_limit` groups is refused with an error instead of returning them
+  all (its output can't be paged, so cutting it short would look complete).
+- Endpoints validate `Origin`, as the MCP transport spec requires: a browser request from another origin gets 403
+  before authentication, for every method. Requests without `Origin` (non-browser clients) and from the server's
+  own origin pass. New `c.allowed_origins` (global, or `allowed_origins:` per server; `:any` turns it off). The
+  docs no longer claim Rails' `config.hosts` checks `Origin`; it checks `Host`.
+- Sessions: a session id is issued only when `initialize` succeeds (a malformed one used to allocate a session that
+  never went away). `:memory` sessions now expire (14 days, like `:cache`) and are capped at 10,000, oldest first;
+  `SessionStore::Memory.new(expires_in:, max:)` sets other bounds.
+- New `c.max_request_bytes` (4 MiB): a larger POST body gets 413. The endpoint reads the body with that bound once,
+  before parsing; it used to read and parse the whole body to spot `initialize`, ahead of the SDK's own bound.
+
+### Added
+
+- `c.allowed_origins` / `allowed_origins:` per server, `c.max_request_bytes`, `databases` on toolsets, and
+  `SessionStore::Memory.new(expires_in:, max:)` (see above).
+- Architecture decision records in `docs/adr/`.
+
+### Fixed
+
 - `:fixed`: a `$match` or `$sort` after a `$limit`/`$skip` window taken without `$sort` no longer fails with
   "The method .reorder() must contain arguments".
+- Documented: a collection's primary key is always addressable as `_id` / `pk`, even when `fields` leaves it out
+  (`fields` decides whether rows and the schema show it). `:fixed`: `alias._id` after a `$lookup` now means the
+  joined collection's primary key, like `alias.pk`; it used to fail.
+
+### Docs
+
+- Docs and the collection generator write `instructions` as a quoted heredoc (`<<~'TXT'`): in an interpolating
+  one, Ruby reads `#$name` / `#@name` in pipeline examples as variables and the text silently loses them.
 
 ## 0.1.1 — 2026-10-24
 
