@@ -1,0 +1,15 @@
+class <%= class_name %>Collection < RorMcp::Collection
+<% if options[:server] -%>
+  server :<%= options[:server] %>
+<% end -%>
+  model <%= model_class %>
+  fields <%= field_list %>
+  # description "What one row is."                 # schema description clients see
+  # instructions "When to query this collection, and what the values mean."
+  # search_fields :name                            # $text / $search (default: string columns in fields)
+
+  # Rows this collection exposes; context comes from the authenticate block.
+  # def scope(context)
+  #   <%= model_class %>.all
+  # end
+end

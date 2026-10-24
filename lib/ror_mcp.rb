@@ -27,6 +27,7 @@ require_relative "ror_mcp/envelope"
 require_relative "ror_mcp/executor"
 require_relative "ror_mcp/server"
 require_relative "ror_mcp/endpoint"
+require_relative "ror_mcp/inspector"
 
 # Rails port of django-mcp-server. See PLAN.md for the design; components land
 # milestone by milestone (PLAN §8).

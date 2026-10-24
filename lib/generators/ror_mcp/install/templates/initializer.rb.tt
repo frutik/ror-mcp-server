@@ -1,0 +1,23 @@
+# MCP servers of this app (ror-mcp-server). Collections and toolsets live in app/mcp/.
+RorMcp.configure do |c|
+  c.default_server name: "<%= server_name %>",
+                   instructions: "Data of <%= server_name %>. Query it with query_data_collections."
+
+  # Return a context for an authorized request (passed to collection scopes and tools), or nil for 401.
+  # c.authenticate do |request|
+  #   token = request.authorization.to_s.delete_prefix("Bearer ")
+  #   key = ApiKey.find_by(token: token)
+  #   key && { user: key.user }
+  # end
+
+  # More servers: c.server :reports, name: "<%= server_name %>-reports", stateless: true
+  # and in config/routes.rb: mount RorMcp.endpoint(:reports), at: "/mcp/reports" (before /mcp).
+
+  # c.pipeline_semantics = :fixed        # default; :parity reproduces django-mcp-server exactly
+  # c.session_store      = :cache        # needs a shared Rails.cache when running several processes
+  # c.read_role          = :reading      # run queries on a replica
+  # c.statement_timeout  = 15.seconds    # PostgreSQL, MySQL
+  # c.default_limit      = 100           # :fixed
+  # c.max_limit          = 1000          # :fixed
+  # c.description_budget = 25_000        # characters per server; see `bin/rails ror_mcp:describe`
+end

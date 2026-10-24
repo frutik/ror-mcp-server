@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-M6 done; verified on SQLite, PostgreSQL 14 and MySQL 8.4 (gem specs and both parity suites). The CI matrix (M7) isn't wired up yet. `lib/ror_mcp/`: Configuration, Server, Endpoint (Rack: auth → Django session rules → SDK transport), SessionStore, Engine (loads `app/mcp` in `to_prepare`), Registry + Collection DSL, Schema (Django's `$jsonSchema`, printed with `PythonRepr`), Pipeline::{Fields (paths → aliased LEFT JOINs),Lookups,Match,Compiler}, Executor, Renderers::Json (DRF's encoding), Tools::QueryTool, Toolset (+ Tools::Content: FastMCP's result conversion), Renderers::{Json,Csv,Jsonl}, PyDecimal (Django's quantized decimal text). `tools/query_tool_text.rb` is generated: run `spec/parity/bin/generate-query-tool-text`. SDK findings: `spike/transport/README.md`. Also Pipeline::Catalog (what `:parity` vs `:fixed` lets a query reach), Envelope + Instrumentation, Routing. Next is M7: generators, rake tasks, CI matrix (PostgreSQL/MySQL), release. Parity: `:parity` 119/120 + 1 documented deviation vs expected/django; `:fixed` 120/120 vs expected/fixed (run the dummy app with `RORMCP_SEMANTICS=fixed` and pass `--expected spec/parity/expected/fixed`). The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
+M6 done; verified on SQLite, PostgreSQL 14 and MySQL 8.4 (gem specs and both parity suites). M7 done: generators, rake tasks (`ror_mcp:describe`, `ror_mcp:check`), CI (`.github/workflows/ci.yml`); 0.1.0 tagged as `v0.1.0` (installed from GitHub, not on RubyGems yet). `lib/ror_mcp/`: Configuration, Server, Endpoint (Rack: auth → Django session rules → SDK transport), SessionStore, Engine (loads `app/mcp` in `to_prepare`), Registry + Collection DSL, Schema (Django's `$jsonSchema`, printed with `PythonRepr`), Pipeline::{Fields (paths → aliased LEFT JOINs),Lookups,Match,Compiler}, Executor, Renderers::Json (DRF's encoding), Tools::QueryTool, Toolset (+ Tools::Content: FastMCP's result conversion), Renderers::{Json,Csv,Jsonl}, PyDecimal (Django's quantized decimal text). `tools/query_tool_text.rb` is generated: run `spec/parity/bin/generate-query-tool-text`. SDK findings: `spike/transport/README.md`. Also Pipeline::Catalog (what `:parity` vs `:fixed` lets a query reach), Envelope + Instrumentation, Routing. Next is M7: generators, rake tasks, CI matrix (PostgreSQL/MySQL), release. Parity: `:parity` 119/120 + 1 documented deviation vs expected/django; `:fixed` 120/120 vs expected/fixed (run the dummy app with `RORMCP_SEMANTICS=fixed` and pass `--expected spec/parity/expected/fixed`). The parity harness defines "done": a reference Django app, its recorded golden output, and the Rails dummy app that must reproduce it (details: `spec/parity/README.md`).
 
 ## Commands
 
@@ -13,6 +13,8 @@ M6 done; verified on SQLite, PostgreSQL 14 and MySQL 8.4 (gem specs and both par
 bundle install
 bundle exec rspec                                        # all specs (spec/dummy and spec/parity are excluded)
 bundle exec rspec spec/ror_mcp/endpoint_spec.rb:90      # one example (line of an `it`)
+BUNDLE_GEMFILE=gemfiles/rails_7.1.gemfile BUNDLE_PATH=$PWD/vendor/bundle bundle exec rspec   # another Rails (CI matrix)
+(cd spec/dummy && bin/rails ror_mcp:describe && bin/rails ror_mcp:check)
 
 # Python side (reference app + clients); .venv is git-ignored
 python -m venv .venv && .venv/bin/pip install -r spec/parity/requirements.txt
@@ -31,6 +33,8 @@ PATH=/opt/homebrew/opt/ruby/bin:$PATH spec/parity/bin/rails-server   # reset DB,
 ```
 
 Both the repo root and `spec/dummy` install gems into `vendor/bundle` (the Homebrew gem dir isn't writable from the sandbox). `spec/dummy` loads the gem via `path: "../.."`. Its `app/mcp`, initializer and routes stay dormant until `RorMcp::Collection` is defined (M2).
+
+**Docs split:** `README.md` is for users of the gem: what it is, features, how to use it. It mentions the Django port exactly once (intro). Everything about the port, parity, milestones, tests and CI goes in `DEVELOPMENT.md`.
 
 **`PLAN.md` is the source of truth.** Read the relevant section before implementing anything; when a decision changes, update `PLAN.md` along with the code.
 

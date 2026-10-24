@@ -79,3 +79,6 @@ jobs:
           bundler-cache: true
           working-directory: spec/dummy
       - run: spec/parity/bin/ci-parity
+      - name: ror_mcp:check on the dummy app
+        working-directory: spec/dummy
+        run: bin/rails ror_mcp:check

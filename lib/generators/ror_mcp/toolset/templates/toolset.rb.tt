@@ -1,0 +1,15 @@
+class <%= class_name %>Tools < RorMcp::Toolset
+<% if options[:server] -%>
+  server :<%= options[:server] %>
+
+<% end -%>
+  tool :example, description: "Say what the tool does, so the AI client knows when to call it." do
+    param :query, :string, required: true, desc: "what to look for"
+  end
+
+  # Strings come back as they are, other values as JSON; exceptions become tool errors.
+  # Tools run read-only unless declared with `writes: true`.
+  def example(query:)
+    { query: query }
+  end
+end

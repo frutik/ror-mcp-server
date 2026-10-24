@@ -3,138 +3,118 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-red)
 ![Rails](https://img.shields.io/badge/rails-%3E%3D%207.1-red)
-![Status](https://img.shields.io/badge/status-pre--release-orange)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
 
-**ROR MCP Server** (`ror-mcp-server`) brings the **Model Context Protocol (MCP)** to
-**Ruby on Rails**. It is a port of
-[django-mcp-server](https://github.com/omarbenhamid/django-mcp-server): **MCP clients**
-and **AI agents** can query your Rails app's data and call its logic through MCP.
+**ROR MCP Server** (`ror-mcp-server`) lets AI agents and **MCP clients** (Claude Code,
+MCP Inspector, the MCP SDKs, …) work with your **Ruby on Rails** app through the
+[Model Context Protocol](https://modelcontextprotocol.io):
 
-🚀 Publish ActiveRecord models as queryable collections in a few lines, safely.<br/>
-🚀 Query them with a MongoDB-style aggregation pipeline (`$match`, `$lookup`, `$group`, …).<br/>
-🚀 Publish plain Ruby methods as MCP tools with a small declarative DSL.<br/>
-✅ Mount one or several MCP servers anywhere in your routes, as plain Rack endpoints.<br/>
-✅ Same tool names, description format and query semantics as django-mcp-server, so client prompts carry over.<br/>
-🤖 Any MCP client that speaks Streamable HTTP (Claude Code, MCP Inspector, the MCP SDKs, …) can connect.
+- 🗂 **Publish ActiveRecord models as collections.** Clients query them with a
+  MongoDB-style pipeline (`$match`, `$lookup`, `$group`, …), compiled to safe, read-only SQL.
+- 🛠 **Publish Ruby methods as tools**, with typed parameters and generated JSON Schema.
+- 🔌 **Mount MCP servers anywhere in your routes.** They are plain Rack endpoints, built on
+  the official [MCP Ruby SDK](https://github.com/modelcontextprotocol/ruby-sdk).
 
-Built on the official [MCP Ruby SDK](https://github.com/modelcontextprotocol/ruby-sdk) (`mcp` gem).
+It is a Rails port of [django-mcp-server](https://github.com/omarbenhamid/django-mcp-server)
+by Omar BENHAMID, and speaks the same tools and query language.
 
-Licensed under the **MIT License**.
-
----
-
-> [!IMPORTANT]
-> **Pre-release: most of the API below is the target, not yet the implementation.**
-> Milestones **M1–M6** are done: everything django-mcp-server publishes works and matches
-> the Django reference app answer for answer (`:parity`), and the corrected `:fixed`
-> semantics, read-only safety envelope, multi-database support, sharding and
-> instrumentation are in. Still to come (M7): generators, rake tasks, CI and the first release. Features are built milestone
-> by milestone (see [Project status](#project-status)), and each section is marked with the
-> milestone that delivers it. The design lives in
-> [`PLAN.md`](PLAN.md).
+> [!NOTE]
+> **0.1.0**, tested in CI on Ruby 3.2–3.4, Rails 7.1–8.1 and SQLite, PostgreSQL and MySQL.
+> It isn't on RubyGems yet: install it from GitHub.
 
 ---
 
 ## Contents
 
-- [Project status](#project-status)
 - [Features](#features)
+- [Installation](#installation)
 - [Quick start](#quick-start)
-- [Verify your setup](#verify-your-setup)
-- [Use with an MCP client](#use-with-an-mcp-client)
+- [Connect a client](#connect-a-client)
 - [Querying collections](#querying-collections)
 - [Collections reference](#collections-reference)
 - [Tools reference](#tools-reference)
-- [Advanced topics](#advanced-topics)
-- [Coming from django-mcp-server](#coming-from-django-mcp-server)
+- [Configuration reference](#configuration-reference)
+- [Guides](#guides)
 - [Development](#development)
 - [License](#license)
 
 ---
 
-## Project status
+## Features
 
-| Milestone | Delivers | Status |
-|---|---|---|
-| **M0** | Gemspec, Django reference app + recorded golden output, Rails dummy app, parity client, transport spike | ✅ done (CI matrix open) |
-| **M1** | `RorMcp::Server`, `RorMcp::Endpoint`, authentication, session stores, `get_server_instructions` | ✅ done: the Rails app matches all 11 recorded HTTP/session scenarios |
-| **M2** | Collection DSL, schema generation, `query_data_collections` with `$match $sort $skip $limit $project` | ✅ done: descriptions match Django byte for byte; 78/120 parity cases pass |
-| **M3** | `$lookup`, references, multiple servers | ✅ done: every `$lookup` parity case passes; 88/120 overall |
-| **M4** | `$group`, `$text`/`$search`, `extra_filters`, computed fields | ✅ done: every query parity case passes (106/120; the rest is tools and CSV) |
-| **M5** | Toolset DSL, write tools, JSON/CSV output, `serialize_with` | ✅ done: **full parity**, 119/120 + 1 documented deviation |
-| **M6** | Read-only safety envelope, multi-database, sharding, description budget, instrumentation, `:fixed` semantics | ✅ done: `:fixed` has its own recorded outputs (120/120); `:parity` still matches Django |
-| **M7** | Generators, rake tasks, first release (0.1.0) | planned |
-
-How "done" is decided: a reference Django app runs django-mcp-server on a small shop
-schema, and its answers to a 107-case corpus are recorded. The Rails dummy app, with the
-same schema and data, has to return the same answers. See [Development](#development).
+- **Collections:** publish ActiveRecord models with an explicit field whitelist, a
+  per-request row scope, full-text search fields, computed SQL fields and joins between
+  collections.
+- **One query tool per server** (`query_data_collections`): its description carries every
+  collection's schema, so clients know what they can ask for. Values are always bound,
+  never interpolated into SQL.
+- **Tools:** Ruby methods with declared parameters. Return values become tool results, and
+  exceptions become tool errors.
+- **Several servers in one app,** each with its own collections, tools, instructions and
+  authentication.
+- **Authentication** is one block: return a context object or `nil` (401). The context
+  reaches collection scopes and tools.
+- **Safe by default:** queries run in a read-only transaction, with a statement timeout and
+  default and maximum row limits. Tools must declare that they write.
+- **Multiple databases and sharding:** `connects_to` per collection, and a routing field
+  that lets the client pick the shard.
+- **JSON, CSV or JSONL output,** inline or as an embedded resource.
+- **Instrumentation** through `ActiveSupport::Notifications`.
+- **Generators and rake tasks** to scaffold servers, inspect them, and validate them in CI.
 
 ---
 
-## Features
+## Installation
 
-- Expose ActiveRecord models as MCP **collections** with an explicit field whitelist. *(M2)*
-- One `query_data_collections` tool per server takes a MongoDB-style pipeline, compiled to Arel/ActiveRecord. Values are always bound, never interpolated. *(M2–M4)*
-- Expose Ruby methods as MCP **tools**, with typed parameters and JSON Schema generated for you. *(M5)*
-- Several MCP servers in one app, each with its own collections, tools, instructions and authentication. *(M1, M3)*
-- Authentication is one block that returns a context object (or `nil` → 401). The context reaches collections and tools. *(M1)*
-- Every query runs read-only, with a statement timeout and a default and maximum limit. *(M6)*
-- Multi-database (`connects_to`) and sharded (`routing_field`) collections. *(M6)*
-- `ActiveSupport::Notifications` instrumentation for every query and tool call. *(M6)*
-- Generators and rake tasks to scaffold, inspect and validate servers in CI. *(M7)*
+```ruby
+# Gemfile
+gem "ror-mcp-server", github: "frutik/ror-mcp-server", tag: "v0.1.0"
+```
+
+```sh
+bundle install
+```
+
+Leave out `tag:` to follow `main`.
+
+Requirements: Ruby ≥ 3.2, Rails ≥ 7.1, and SQLite, PostgreSQL or MySQL.
 
 ---
 
 ## Quick start
 
-### 1️⃣ Install
-
-The gem isn't on RubyGems yet. Use it from GitHub:
-
-```ruby
-# Gemfile
-gem "ror-mcp-server", github: "frutik/ror-mcp-server"
-```
-
-Once released *(M7)*: `bundle add ror-mcp-server`.
-
-Requirements: Ruby ≥ 3.2, Rails ≥ 7.1, and SQLite, PostgreSQL or MySQL. All three are verified: the
-gem specs and both parity suites pass on SQLite 3, PostgreSQL 14 and MySQL 8.4.
-
----
-
-### 2️⃣ Configure *(M1)*
-
-Run the installer *(M7)*, or create the two files by hand:
+### 1. Install
 
 ```sh
 bin/rails generate ror_mcp:install
 ```
 
+This creates `config/initializers/ror_mcp.rb`, mounts the server at `/mcp` and creates
+`app/mcp/`, where collections and tools live:
+
 ```ruby
 # config/initializers/ror_mcp.rb
 RorMcp.configure do |c|
-  c.default_server name: "myapp", instructions: "Data of MyApp. Call get_server_instructions first."
+  c.default_server name: "myapp", instructions: "Data of MyApp. Query it with query_data_collections."
 
   c.authenticate do |request|              # return a context, or nil for 401
-    key = ApiKey.check_token(request.authorization.to_s.delete_prefix("Bearer "))
-    key && { user: key.user, api_key: key }
+    key = ApiKey.find_by(token: request.authorization.to_s.delete_prefix("Bearer "))
+    key && { user: key.user }
   end
 end
 ```
 
 ```ruby
 # config/routes.rb
-mount RorMcp::Engine, at: "/mcp"           # serves the default server
+mount RorMcp::Engine, at: "/mcp"
 ```
 
-The MCP endpoint is now `/mcp`.
+### 2. Publish models
 
----
-
-### 3️⃣ Publish models *(M2)*
-
-Create a collection in `app/mcp/`. Files there are loaded at boot.
+```sh
+bin/rails generate ror_mcp:collection Order --fields id number status total customer placed_at
+bin/rails generate ror_mcp:collection Customer --fields id name country
+```
 
 ```ruby
 # app/mcp/order_collection.rb
@@ -143,67 +123,97 @@ class OrderCollection < RorMcp::Collection
   fields :id, :number, :status, :total, :customer, :placed_at
   instructions "One row per order. Latest = highest id."
 
-  def scope(context)                       # = django-mcp-server's get_queryset
+  def scope(context)                       # the rows this collection exposes
     Order.where(account: context[:user].account)
   end
 end
-
-class CustomerCollection < RorMcp::Collection
-  model  Customer
-  fields :id, :name, :country
-end
 ```
 
-`fields` is required. Use `fields :all` to publish every column, but see
-[Description size](#description-size) first. `customer` is a `belongs_to`, and
-because `Customer` is also published on the same server, clients can join to it with `$lookup`.
+`fields` is required; `fields :all` publishes every column. `customer` is a `belongs_to`.
+Because customers are published too, clients can join orders to customers with `$lookup`.
 
----
-
-### 4️⃣ Publish tools *(M5)*
-
-```ruby
-# app/mcp/my_ai_tools.rb
-class MyAiTools < RorMcp::Toolset
-  tool :add, description: "A service to add two numbers together" do
-    param :a, :integer, required: true
-    param :b, :integer, required: true
-  end
-
-  def add(a:, b:)
-    a + b
-  end
-
-  tool :send_email, writes: true, description: "A tool to send emails" do
-    param :to_email, :string, required: true
-    param :subject,  :string, required: true
-    param :body,     :string, required: true
-  end
-
-  def send_email(to_email:, subject:, body:)
-    ApplicationMailer.with(to: to_email, subject: subject, body: body).plain.deliver_now
-    "sent"
-  end
-end
-```
-
-Ruby has no type hints, so parameters are declared with `param` instead of being
-inferred as django-mcp-server does. Only declared methods become tools.
-
----
-
-## Verify your setup
-
-### Inspect what a server publishes *(M7)*
-
-The counterpart of django-mcp-server's `manage.py mcp_inspect`:
+### 3. Publish tools
 
 ```sh
-bin/rails "ror_mcp:describe[default]"   # instructions, tools, and the size of each tool description
-bin/rails ror_mcp:check                  # boot validations for CI: fields exist, references resolve, budget holds
+bin/rails generate ror_mcp:toolset Orders
 ```
 
-### Talk to the endpoint with curl *(M1)*
+```ruby
+# app/mcp/orders_tools.rb
+class OrdersTools < RorMcp::Toolset
+  tool :order_count, description: "Number of orders placed by a customer" do
+    param :customer_id, :integer, required: true
+  end
+
+  def order_count(customer_id:)
+    Order.where(customer_id: customer_id).count
+  end
+
+  tool :flag_order, writes: true, description: "Flag an order for review" do
+    param :order_id, :integer, required: true
+    param :reason,   :string,  required: true
+  end
+
+  def flag_order(order_id:, reason:)
+    Order.find(order_id).update!(flagged: true, flag_reason: reason)
+    { flagged: order_id }
+  end
+end
+```
+
+### 4. Check it
+
+```sh
+bin/rails ror_mcp:describe     # servers, tools, collections, description sizes
+bin/rails ror_mcp:check        # validates everything; exits 1 on a problem (use it in CI)
+```
+
+The server answers at `http://localhost:3000/mcp`.
+
+---
+
+## Connect a client
+
+> [!IMPORTANT]
+> For data that isn't public, configure [authentication](#authentication) first.
+
+**Claude Code**
+
+```sh
+claude mcp add --transport http myapp http://localhost:3000/mcp --header "Authorization: Bearer <token>"
+```
+
+**MCP Inspector**
+
+```sh
+npx @modelcontextprotocol/inspector
+```
+
+Choose transport **Streamable HTTP**, enter `http://localhost:3000/mcp`, and add your
+`Authorization` header.
+
+**MCP Python SDK**
+
+```python
+import asyncio
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+
+async def main():
+    async with streamablehttp_client("http://localhost:3000/mcp") as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("query_data_collections", {
+                "collection": "order",
+                "search_pipeline": [{"$sort": {"id": -1}}, {"$limit": 5}],
+            })
+            print(result.content[0].text)
+
+asyncio.run(main())
+```
+
+**curl**
 
 ```sh
 curl -si http://localhost:3000/mcp \
@@ -214,108 +224,57 @@ curl -si http://localhost:3000/mcp \
 The response is plain JSON (never an SSE stream) with an `Mcp-Session-Id` header. Send
 that header with every later request.
 
----
-
-## Use with an MCP client
-
-**IMPORTANT** For non-public data, always configure [authentication](#authentication).
-
-### MCP Python SDK
-
-```python
-from mcp.client.streamable_http import streamablehttp_client
-from mcp import ClientSession
-
-
-async def main():
-    async with streamablehttp_client("http://localhost:3000/mcp") as (read_stream, write_stream, _):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            result = await session.call_tool("query_data_collections", {
-                "collection": "order",
-                "search_pipeline": [{"$sort": {"id": -1}}, {"$limit": 5}],
-            })
-            print(result)
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
-```
-
-### Claude Code
-
-```sh
-claude mcp add --transport http myapp http://localhost:3000/mcp --header "Authorization: Bearer <token>"
-```
-
-### MCP Inspector
-
-```sh
-npx @modelcontextprotocol/inspector
-```
-
-Choose transport **Streamable HTTP**, enter `http://localhost:3000/mcp` and add your
-`Authorization` header.
-
-### Clients that only speak stdio
-
-Only the Streamable HTTP transport is planned (django-mcp-server's `stdio_server`
-command is not in the v1 plan), so stdio-only clients need an HTTP bridge.
+Only the Streamable HTTP transport is supported; clients that speak only stdio need an
+HTTP bridge.
 
 ---
 
 ## Querying collections
 
-### The tool
+### The tools
 
-Each server with collections gets one tool:
+Every server publishes `get_server_instructions`, and, when it has collections:
 
 ```
 query_data_collections(collection: string, search_pipeline: object[] = [])
 ```
 
-Its description holds a fixed preamble, the pipeline syntax below, and the `$jsonSchema`
-of every collection on that server. Clients read the schemas from there. Tool name,
-parameter names and description layout are the same as django-mcp-server's.
-
-Collection names are the lowercase model name (`order`, `lineitem`), or whatever you
+The tool's description explains the pipeline syntax and lists every collection with its
+`$jsonSchema`: field types, references to other collections, enum values and descriptions.
+Collection names default to the model's singular name (`order`, `line_item`) and can be
 set with `collection_name`.
 
-### Supported stages
+### Stages
 
 | Stage | What it does |
 |---|---|
-| `$match` | Filters. Literal values mean equality. Operators: `$eq $ne $gt $gte $lt $lte $in $nin $regex`, logical `$and $or $nor`, `null` → `IS NULL`, and any operator enabled with `extra_filters`. Use `_id` for the primary key. |
-| `$match: {$text: {$search: "…"}}` | Full-text search: every word must match at least one search field (case-insensitive). |
-| `$search: {text: {query, path?}}` | Same search, optionally limited to some search fields. |
+| `$match` | Filters. A literal value means equality. Operators: `$eq $ne $gt $gte $lt $lte $in $nin $regex`, `$and $or $nor`, and any operator a collection enables with `extra_filters`. `null` matches NULL. `_id` is the primary key. |
+| `$match: {$text: {$search: "…"}}` | Full-text search: every word must match at least one search field, case-insensitively. |
+| `$search: {text: {query, path?}}` | The same search, optionally limited to some search fields. |
 | `$lookup` | Joins a `belongs_to` target: `{from, localField, foreignField: "_id", as}`. Later stages use `as.field`. |
-| `$sort` | `{field: 1}` ascending, `{field: -1}` descending. |
-| `$skip` / `$limit` | Pagination. |
-| `$project` | Picks output fields: `{field: 1}`, renames with `{"key": "$field"}` or `{"key": "$alias.field"}`. Dotted keys produce nested objects. |
-| `$group` | Must be the last stage, and no `$project` may come before it. `_id` is `null`, `"$field"` or `{key: "$field", …}`. Accumulators: `$sum $avg $min $max $count`. |
+| `$sort` | `{field: 1}` ascending, `{field: -1}` descending. Lookup aliases work: `{"c.name": 1}`. |
+| `$skip` / `$limit` | Pagination, applied in pipeline order. |
+| `$project` | `{field: 1}` includes, `{field: 0}` excludes, `{"key": "$field"}` or `{"key": "$alias.field"}` renames. Dotted keys produce nested objects. |
+| `$group` | Last stage. `_id` is `null`, `"$field"` or `{key: "$field", …}`. Accumulators: `$sum $avg $min $max $count`. |
 
-Anything else (`$unwind`, `$addFields`, `$set`, …) is rejected with an error.
+Any other stage (`$unwind`, `$addFields`, …) is rejected with an error explaining what's
+supported. Errors come back as tool errors, written for the client to correct its query.
 
 ### Examples
 
-These are real answers from the reference app (`spec/parity/expected/django`). The
-Rails app must return the same bytes.
-
-Join and project:
+Join orders to customers:
 
 ```json
 [{"$lookup": {"from": "customer", "localField": "customer", "foreignField": "_id", "as": "c"}},
- {"$sort": {"id": 1}}, {"$limit": 4},
+ {"$sort": {"id": 1}}, {"$limit": 2},
  {"$project": {"number": 1, "customer_name": "$c.name", "customer_country": "$c.country"}}]
 ```
 ```json
 [{"number":"ORD-1001","customer_name":"Bram Peeters","customer_country":"BE"},
- {"number":"ORD-1002","customer_name":"Bram Peeters","customer_country":"BE"},
- {"number":"ORD-1003","customer_name":"Anna de Vries","customer_country":"NL"},
- {"number":"ORD-1004","customer_name":"Clara Müller","customer_country":"DE"}]
+ {"number":"ORD-1002","customer_name":"Bram Peeters","customer_country":"BE"}]
 ```
 
-Aggregate:
+Revenue per status:
 
 ```json
 [{"$group": {"_id": "$status", "n": {"$sum": 1}, "revenue": {"$sum": "$total"}}}]
@@ -335,70 +294,48 @@ Full-text search:
  {"sku":"LAP-003","name":"Budget laptop"}]
 ```
 
-### Output
+### Results
 
-Rows come back as one JSON text content. The primary key is `id` (or the model's own
-primary key), foreign keys appear as `<name>_id`, decimals are numbers, and datetimes are
-ISO 8601 in UTC. See [Output formats](#output-formats-and-embedded-resources) for CSV and
-embedded resources.
-
-### Pipeline semantics: `:parity` vs `:fixed` *(M6)*
-
-django-mcp-server has behaviours that surprise clients and sometimes leak data.
-`config.pipeline_semantics` picks between reproducing them exactly (`:parity`, useful when
-migrating) and correcting them (`:fixed`, the default for new apps):
-
-| django-mcp-server behaviour | `:parity` | `:fixed` |
-|---|---|---|
-| No `$project` returns **all** columns, including ones outside `fields` | reproduced | only `fields` + computed |
-| `alias.field` after `$lookup` reaches any column of the joined model | reproduced | only the target collection's `fields` |
-| The joined collection's `scope` is ignored | reproduced | applied as a join condition |
-| `$lookup.from` isn't checked against the actual association | accepted | rejected with an explanation |
-| `localField` names containing `_id` mid-word (`billing_identity`) break | reproduced | resolved by reflection |
-| `$sort` with any value other than `1` sorts descending | reproduced | only `1` / `-1` |
-| `$skip` is applied after `$limit`, whatever the order | reproduced | stages applied in order |
-| `$project: {field: 0}` is ignored | reproduced | exclusion supported |
-| No default or maximum `$limit` | reproduced | `default_limit` / `max_limit` |
-
-`$sum: 1` counts rows with `COUNT(*)` in both modes, so models whose primary key isn't
-`id` work. The read-only envelope applies in both modes.
+Rows come back as one JSON text content. Without `$project`, a row holds the collection's
+`fields`, with foreign keys as `<name>_id`. Decimals are numbers, and datetimes are ISO 8601
+in UTC. An empty result is `[]`. Queries without `$limit` get `default_limit` rows (100),
+and no query gets more than `max_limit` (1000). See [Output formats](#output-formats) for
+CSV, JSONL and embedded resources.
 
 ---
 
 ## Collections reference
 
-*(M2–M6)*
-
 ```ruby
 class Sales::OrderCollection < RorMcp::Collection
   server :sales                             # default: the default server
   model  Order
-  collection_name "order"                   # default: model_name.singular
-  fields :id, :number, :status, :total_cents, :currency, :customer, :placed_at   # required (or :all)
-  exclude_fields :internal_notes            # with fields :all
+  collection_name "order"                   # default: the model's singular name
+  fields :id, :number, :status, :total, :currency, :customer, :placed_at   # required (or :all)
+  exclude_fields :internal_notes            # useful with fields :all
   search_fields :number                     # default: string/text columns within fields
   extra_filters :icontains, :startswith     # extra $match operators clients may use
-  max_limit 500
+  max_limit 500                             # default: config.max_limit
   output_format :json                       # :json | :csv | :jsonl
-  output_as_resource false                  # true → result attached as an embedded resource
+  output_as_resource false                  # true → results attached as an embedded resource
+
+  description "One row per order placed by a customer."   # top of the schema
+  describe :total, "Order total in EUR"                   # a field's description
+  choice_labels :currency, "EUR" => "Euro", "USD" => "US dollar"   # labels for enum values
 
   computed :line_count, :integer,
            sql: "SELECT count(*) FROM line_items WHERE line_items.order_id = {table}.id",
            doc: "number of line items in the order"
 
-  reference :customer, to: "customer"       # :fixed: explicit target collection, when reflection can't decide
-  connects_to role: :reading                # optional: role/shard for this collection's queries
+  reference :customer, to: "customer"       # target collection, when it can't be inferred
+  connects_to role: :reading                # role/shard for this collection's queries
 
   instructions <<~TXT
     One row per order. "status": pending, paid, shipped, cancelled.
     "customer" references the customer collection. Latest = highest id.
   TXT
 
-  description "One row per order placed by a customer."    # schema description (Django: model docstring)
-  describe :total, "Order total in cents"                  # field description (Django: help_text)
-  choice_labels :currency, "EUR" => "Euro", "USD" => "US dollar"   # enum labels (Django: choices)
-
-  def scope(context)                        # row-level filtering; context comes from authenticate
+  def scope(context)                        # the rows this collection exposes
     Order.all
   end
 end
@@ -406,36 +343,30 @@ end
 
 | Option | Meaning |
 |---|---|
-| `server` | Which server publishes the collection. |
+| `server` | Which server publishes the collection. The same model can be published on several servers. |
 | `model` | The ActiveRecord model. |
-| `collection_name` | Name clients use. Two collections can't share a name on one server (boot error). |
-| `fields` | Published columns and associations. Required, so wide models don't bloat the tool description by accident. |
-| `exclude_fields` | Columns to drop from `fields :all`. |
+| `collection_name` | The name clients use. Two collections can't share a name on one server. |
+| `fields` | Published columns and `belongs_to` associations. Only these can be filtered, sorted, projected or grouped, also through `$lookup`. Required, so wide models don't bloat the description by accident. |
+| `exclude_fields` | Fields to leave out. |
 | `search_fields` | Columns used by `$text` / `$search`. |
-| `extra_filters` | Extra `$match` operators, as in django-mcp-server (`{"name": {"$icontains": "x"}}`). |
-| `computed` | A SQL/Arel expression published as a field. It appears in the schema, can be filtered, sorted and grouped, and is reachable through `$lookup`. |
-| `reference` | Declares where an association points when it can't be inferred (STI, polymorphic, custom `class_name`). |
-| `max_limit` | Upper bound on `$limit` for this collection (`:fixed`). |
-| `instructions` | Extra text appended to the collection's schema in the tool description. |
-| `description` | The schema's top-level description. Default: `Model(field, …)`, like Django's auto docstring. |
-| `describe` | A field's description. Default: the column comment, where the database has comments. |
-| `choice_labels` | Labels for an enum's values. Default: the humanized enum key. |
-| `output_format` / `output_as_resource` | See [Output formats](#output-formats-and-embedded-resources). |
-| `connects_to` / `routing_field` | See [Multiple databases and sharding](#multiple-databases-and-sharding). |
-| `abstract!` | Marks a shared base class, which is never published itself. |
-| `scope(context)` | The relation queries start from (django-mcp-server's `get_queryset`). |
+| `extra_filters` | Extra `$match` operators: `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `iexact`, `iregex`, `range`, `date`, `year`, `month`, `day`, `hour`, `minute`, `second`, `week_day`, `quarter`. Use as `{"number": {"$icontains": "x"}}`. |
+| `computed` | A SQL expression published as a field: in the schema, and usable in every stage, also through `$lookup`. `{table}` stands for the collection's table (or its join alias). |
+| `reference` | Where a `belongs_to` points, when it can't be inferred. Subclasses (STI) are resolved automatically. |
+| `max_limit` | Upper bound on `$limit` for this collection. |
+| `description`, `describe`, `choice_labels` | Text for the schema. Defaults: `Model(field, …)`, the column comment, the humanized enum key. |
+| `instructions` | Extra text after the collection's schema in the tool description. |
+| `output_format`, `output_as_resource` | See [Output formats](#output-formats). |
+| `connects_to`, `routing_field` | See [Multiple databases and sharding](#multiple-databases-and-sharding). |
+| `abstract!` | A shared base class, never published itself; subclasses inherit its settings. |
+| `scope(context)` | The relation queries start from. `context` is what `authenticate` returned. A `$lookup` into this collection sees the same rows. |
 
-The schema comes from the model: column types → `bsonType`, `belongs_to` → `objectId` +
-`ref`, `enum` → `enum`, `null: false` → `required` (except auto-increment keys and string
-columns defaulting to `""`), and column comments or `describe` → descriptions. The schema
-is printed in the same Python-`repr` form django-mcp-server uses, so descriptions match
-byte for byte.
+The schema comes from the model: column types become `bsonType`, `belongs_to` becomes a
+reference to the target collection, `enum` becomes `enum`, and non-null columns become
+`required`.
 
 ---
 
 ## Tools reference
-
-*(M5)*
 
 ```ruby
 class Sales::CatalogSearchTools < RorMcp::Toolset
@@ -451,34 +382,58 @@ class Sales::CatalogSearchTools < RorMcp::Toolset
     ProductSearch.call(query:, brands:, limit:)
   end
 
-  tool :flag_order, writes: true, description: "Flag an order for review" do
-    param :order_id, :integer, required: true
-    param :reason,   :string,  required: true
-  end
+  tool :latest_order, description: "The most recent order", serialize_with: OrderSerializer
 
-  def flag_order(order_id:, reason:)
-    Order.find(order_id).update!(flagged: true, flag_reason: reason)
-    { flagged: order_id }
+  def latest_order
+    Order.order(id: :desc).first
   end
 end
 ```
 
-- A new toolset instance handles each call, with `context` (from `authenticate`) and `request` available.
-- The return value becomes content the way FastMCP converts it: a string as-is, a list as
-  one content per element, anything else as JSON indented by 2 (decimals as strings), `nil`
-  as no content. An `ActiveRecord::Relation` is loaded first. Returning an
-  `MCP::Tool::Response` passes it through unchanged.
-- An exception becomes an MCP tool error (`isError: true`) whose text describes the failure, as in django-mcp-server.
-- Tools run read-only unless declared `writes: true`.
-- Parameter types: `:string`, `:integer`, `:number`, `:boolean`, `:object`, and arrays as `[:type]`.
+- Each tool needs an instance method of the same name. Parameter types: `:string`,
+  `:integer`, `:number`, `:boolean`, `:object`, and arrays as `[:type]`.
+- Each call gets a new instance, with `context` (from `authenticate`) and `request` available.
+- Return values: a string as-is, an array as one result per element, anything else as JSON
+  indented by 2, and `nil` as no content. An `ActiveRecord::Relation` is loaded first. An
+  `MCP::Tool::Response` passes through unchanged.
+- `serialize_with:` shapes the return value first. It takes a callable, a Blueprinter-style
+  class (`render_as_hash`), or a serializer class (`new(value).as_json`).
+- Exceptions become tool errors ("Error executing tool …") with the message.
+- Tools run read-only. A tool that writes must declare `writes: true`.
 
 ---
 
-## Advanced topics
+## Configuration reference
 
-### Multiple servers (secondary endpoints)
+```ruby
+RorMcp.configure do |c|
+  c.default_server name: "myapp", instructions: "…", stateless: false
+  c.server :reports, name: "myapp-reports", instructions: "…", stateless: true,
+           authenticate: ->(request) { … }   # per server: a callable, or false for none
 
-*(M1, M3)* Declare more servers and mount each one where you like:
+  c.authenticate { |request| … }      # global: return a context or nil (401)
+  c.session_store      = :memory      # :memory | :cache (Rails.cache) | object with create/exists?/delete
+  c.instructions_tool  = true         # publish get_server_instructions
+
+  c.read_role          = nil          # e.g. :reading, to run queries on a replica
+  c.statement_timeout  = nil          # e.g. 15.seconds (PostgreSQL, MySQL)
+  c.default_limit      = 100          # rows when a pipeline has no $limit
+  c.max_limit          = 1000         # upper bound on $limit
+  c.description_budget = nil          # characters per server's query tool description
+  c.description_budget_mode = :warn   # or :raise
+
+  c.on_query { |event| … }            # after each query
+  c.on_tool  { |event| … }            # after each tool call
+
+  c.pipeline_semantics = :fixed       # :parity is a compatibility mode, see DEVELOPMENT.md
+end
+```
+
+---
+
+## Guides
+
+### Multiple servers
 
 ```ruby
 # config/initializers/ror_mcp.rb
@@ -490,91 +445,63 @@ end
 ```
 
 ```ruby
-# config/routes.rb
-scope "/mcp" do
-  mount RorMcp.endpoint(:default), at: "catalog"
-  mount RorMcp.endpoint(:sales),   at: "sales"
-  mount RorMcp.endpoint(:support), at: "support"
-end
+# config/routes.rb — mounts match by prefix in order, so longer paths go first
+mount RorMcp.endpoint(:sales),   at: "/mcp/sales"
+mount RorMcp.endpoint(:support), at: "/mcp/support"
+mount RorMcp::Engine,            at: "/mcp"   # the default server
 ```
 
-Collections and toolsets pick their server with `server :sales`. The same model can be
-published on several servers. Collections are registered by `[server, collection_name]`,
-not by class name, so classes in different modules never clash.
+Collections and toolsets choose their server with `server :sales`. Collections are
+registered by server and name, not by class name, so classes in different modules never clash.
 
 ### Authentication
 
-*(M1)* `authenticate` gets the `ActionDispatch::Request` and returns a context object, or
-`nil` to answer `401` with `WWW-Authenticate: Bearer`. The context is passed to
-collection `scope`s and to tools.
+`authenticate` receives the `ActionDispatch::Request` and returns a context object, or
+`nil` to answer `401` with `WWW-Authenticate: Bearer`. The context is passed to collection
+scopes and tools.
 
 ```ruby
 RorMcp.configure do |c|
-  c.authenticate do |request|                         # applies to every server…
+  c.authenticate do |request|                         # every server…
     token = request.authorization.to_s.delete_prefix("Bearer ")
     (user = User.find_by_api_token(token)) && { user: user }
   end
 
-  c.server :partners, name: "partners",               # …unless a server sets its own
+  c.server :partners, name: "partners",               # …unless it sets its own
            authenticate: ->(request) { Partner.authenticate(request) }
 end
 ```
 
-The endpoint is a plain Rack app, so there are no cookies and no CSRF checks. Token
-clients don't need the workaround that DRF's `SessionAuthentication` forces on
-django-mcp-server. OAuth isn't part of v1.
+Endpoints are plain Rack apps: no cookies and no CSRF checks. Host checks are left to
+Rails' `config.hosts`, so make sure the host your clients use is allowed.
 
-**Host checks:** the endpoint relies on Rails' `config.hosts` (HostAuthorization). Make
-sure the host your clients use is allowed.
+### Sessions
 
-### Session management
-
-*(M1)* Servers are stateful by default, with the same rules as django-mcp-server:
+Servers are stateful by default:
 
 - `initialize` without a session gets a new `Mcp-Session-Id`.
-- Any other request without one is answered `400`. An unknown or expired id gets `404`.
+- Any other request without one gets `400`, and an unknown or expired id gets `404`.
 - `DELETE` ends the session.
 
-```ruby
-c.session_store = :memory   # per process; fine for one Puma worker / development
-c.session_store = :cache    # Rails.cache; needs a shared cache (Redis, Memcached) with several processes
-c.session_store = MyStore.new  # anything with create / exists? / delete
-```
+`:memory` sessions live in one process. With several Puma workers or hosts, use
+`session_store = :cache` with a shared cache (Redis, Memcached, Solid Cache), or
+`stateless: true` on the server, which skips sessions entirely.
 
-`stateless: true` on a server skips sessions entirely: every request stands alone. MCP
-responses are always plain JSON, never SSE streams.
-
-### Output formats and embedded resources
-
-*(M5)* Per collection:
+### Output formats
 
 ```ruby
 output_format :csv           # :json (default) | :csv | :jsonl
-output_as_resource true      # reply "Results attached" + the data as an embedded resource
+output_as_resource true      # reply "Results attached" plus the data as an embedded resource
 ```
 
-Custom formats can be registered as renderers. CSV output flattens nested values into
-dotted columns, as DRF's CSV renderer does.
-
-### Serializing tool output
-
-*(M5)* The counterpart of `drf_serialize_output`:
-
-```ruby
-tool :latest_order, description: "The most recent order",
-                    serialize_with: OrderSerializer   # ActiveModel::Serializer, Blueprinter, or any #call / #as_json
-
-def latest_order
-  Order.order(id: :desc).first
-end
-```
+CSV has a sorted header, flattens nested values into dotted columns (`metadata.channel`),
+and uses `\r\n` line endings.
 
 ### Computed fields
 
-*(M4)* Values that live in SQL rather than in a column. They appear in the schema
-(marked as computed) and work in every stage, including from another collection through
-`$lookup`. Write `{table}` for the collection's table: it is replaced by the table name, or
-by the join alias when the field is reached through `$lookup`:
+Values that live in SQL rather than in a column. They appear in the schema and work in
+every stage, including from another collection through `$lookup`. `{table}` is replaced by
+the table name, or by the join alias:
 
 ```ruby
 computed :line_count, :integer,
@@ -582,42 +509,32 @@ computed :line_count, :integer,
          doc: "number of line items in the order"
 ```
 
-### Safety: read-only queries, timeouts, limits
+### Safety
 
-*(M6, done)* Every collection query, and every tool not declared `writes: true`, runs in
-an envelope that never changes results, only stops unsafe ones:
+Every query, and every tool not declared `writes: true`, runs in an envelope that never
+changes results, only stops unsafe ones:
 
 ```ruby
 connected_to(role: read_role, shard: …) {        # when configured
   while_preventing_writes { transaction {        # Rails refuses write statements
     # PostgreSQL: SET TRANSACTION READ ONLY; SET LOCAL statement_timeout
-    # MySQL:      SET SESSION max_execution_time (restored afterwards)
-    # SQLite:     PRAGMA query_only = ON (restored afterwards)
+    # MySQL:      SET SESSION max_execution_time
+    # SQLite:     PRAGMA query_only
     …                                            # rolled back at the end
 } } }
 ```
 
-```ruby
-c.read_role         = :reading        # route queries to a replica
-c.statement_timeout = 15.seconds      # PostgreSQL, MySQL
-c.default_limit     = 100             # :fixed only: applied when a pipeline has no $limit
-c.max_limit         = 1000            # :fixed only: $limit is clamped to this (per collection: max_limit)
-```
-
-A tool that writes must say so (`tool :flag_order, writes: true`); without it, a write
-fails with an `isError` result. For defence in depth, also give the MCP database role
-read-only grants: the guards above inspect statements, a database role can't be talked
-out of its grants.
+For defence in depth, also give the database user that serves MCP read-only grants.
 
 ### Multiple databases and sharding
 
-*(M6, done)* A collection runs on its model's database. Pin a role or shard with
-`connects_to`, or let the client pick the shard with a routing field:
+A collection runs on its model's database. Pin a role or shard with `connects_to`, or let
+the client pick the shard with a routing field:
 
 ```ruby
 class Billing::InvoiceCollection < RorMcp::Collection
   model Invoice                         # Invoice < BillingRecord, which connects_to its database
-  connects_to role: :reading            # optional: role and/or shard for this collection's queries
+  connects_to role: :reading
   fields :all
 end
 
@@ -629,30 +546,20 @@ end
 ```
 
 - References into another database are left out of the schema, and a `$lookup` across
-  databases is refused with an error naming both databases.
-- A routing field is a pseudo-field: it's published in the schema and required as an
-  equality in `$match` (`{"region": "eu"}` or `{"region": {"$eq": "eu"}}`). The query then
-  runs under `connected_to(shard: :eu)`. `to` returning `nil` means "no such shard".
-  Using the field in `$sort`, `$project`, `$group` or `$lookup` is refused with an error
-  that explains why.
+  databases is refused.
+- A routing field appears in the schema and is required as an equality in `$match`
+  (`{"region": "eu"}`). The query then runs under `connected_to(shard: :eu)`. `to`
+  returning `nil` means "no such shard". The field can't be sorted, projected, grouped or
+  joined.
 
 ### Description size
 
-*(M6, done)* The `query_data_collections` description contains every collection's schema. If it
-grows too long, some clients truncate it and silently lose collections, while the server
-still connects as if nothing were wrong.
-
-```ruby
-c.description_budget      = 25_000   # characters per server; nil (default) = no check
-c.description_budget_mode = :raise   # default :warn (logs through Rails.logger)
-```
-
-The check runs when a server builds its tools, on its first request.
-`bin/rails ror_mcp:describe` *(M7)* will print each server's description size.
+The `query_data_collections` description contains every collection's schema. If it gets
+too long, some clients truncate it and silently lose collections. Keep `fields` narrow,
+watch `bin/rails ror_mcp:describe`, and set `description_budget` to get a warning, or an
+error with `description_budget_mode = :raise`.
 
 ### Instrumentation
-
-*(M6, done)* `ActiveSupport::Notifications` events, and callbacks on the configuration:
 
 | Event | Payload |
 |---|---|
@@ -660,89 +567,29 @@ The check runs when a server builds its tools, on its first request.
 | `tool.ror_mcp` | server, tool, error |
 
 ```ruby
-c.on_query { |event| Rails.logger.info(event.to_h.to_json) }   # event: name, server, collection, pipeline, rows, duration_ms, error
+c.on_query { |event| Rails.logger.info(event.to_h.to_json) }   # name, server, collection, pipeline, rows, duration_ms, error
 c.on_tool  { |event| StatsD.timing("mcp.tool.#{event.tool}", event.duration_ms) }
 ```
 
 ### Generators and rake tasks
 
-*(M7)*
-
 ```sh
-bin/rails g ror_mcp:install                                          # initializer, route, app/mcp/
-bin/rails g ror_mcp:collection Sales::Order --server sales --fields id number status
-bin/rails g ror_mcp:toolset Sales::CatalogSearch
-bin/rails "ror_mcp:describe[sales]"
-bin/rails ror_mcp:check
+bin/rails g ror_mcp:install                                              # initializer, route, app/mcp/
+bin/rails g ror_mcp:collection Sales::Order --server sales --fields id number status [--model Order]
+bin/rails g ror_mcp:toolset Sales::CatalogSearch [--server sales]
+bin/rails "ror_mcp:describe[sales]"                                      # one server, or all without [ ]
+bin/rails ror_mcp:check                                                  # exits 1 on problems
 ```
-
----
-
-## Coming from django-mcp-server
-
-| django-mcp-server | ror-mcp-server |
-|---|---|
-| `INSTALLED_APPS += ["mcp_server"]` + `path("", include("mcp_server.urls"))` | `gem "ror-mcp-server"` + `mount RorMcp::Engine, at: "/mcp"` |
-| `<app>/mcp.py` autodiscovery | `app/mcp/**/*.rb`, loaded at boot |
-| `DJANGO_MCP_GLOBAL_SERVER_CONFIG` | `c.default_server name:, instructions:, stateless:` |
-| `DjangoMCP(name=…)` + `MCPServerStreamableHttpView.as_view(mcp_server=…)` | `c.server :name, …` + `mount RorMcp.endpoint(:name), at: …` |
-| `DJANGO_MCP_AUTHENTICATION_CLASSES` | `c.authenticate { \|request\| … }` (global or per server) |
-| `ModelQueryToolset` | `RorMcp::Collection` |
-| `model`, `fields`, `exclude_fields`, `search_fields`, `extra_filters` | same names |
-| `extra_instructions` | `instructions` |
-| `get_queryset()` (with `self.request`) | `scope(context)` |
-| `output_format`, `output_as_resource` | same names |
-| `MCPToolset` (public methods + type hints) | `RorMcp::Toolset` (`tool` + `param` declarations) |
-| `@drf_serialize_output(S)` | `serialize_with: S` |
-| `DJANGO_MCP_OUTPUT_RENDERER_CLASSES` | `output_format` + registered renderers |
-| `DJANGO_MCP_GET_SERVER_INSTRUCTIONS_TOOL` | `c.instructions_tool` |
-| `manage.py mcp_inspect` | `bin/rails ror_mcp:describe` |
-| `drf_publish_*_mcp_tool` (DRF views as tools) | not in v1 (planned: `publish_action`) |
-| `manage.py stdio_server` | not in v1 |
-| `@mcp_server.tool()` low-level FastMCP tools | not in v1 |
-
-Unchanged for clients: the tools `query_data_collections` and `get_server_instructions`,
-their parameters, the description layout, the pipeline syntax, and the shape of results.
-Under `:parity` semantics, results are byte-identical.
 
 ---
 
 ## Development
 
-```sh
-git clone --recurse-submodules git@github.com:frutik/ror-mcp-server.git
-bundle install
-bundle exec rspec
-```
-
-The repository contains:
-
-| Path | What |
-|---|---|
-| `lib/` | The gem. |
-| `django-mcp-server/` | Submodule: the library being ported (reference source). |
-| `spec/parity/django_app/` | Reference Django app: a shop schema published with django-mcp-server (two servers, tools, CSV, embedded resources, bearer auth). |
-| `spec/parity/expected/django/` | Its recorded answers: HTTP/session behaviour, `tools/list`, 107 `tools/call` cases. |
-| `spec/parity/client/` | `mcp_parity.py` (record / check any endpoint), `sdk_smoke.py` (official SDK client), `compare_dbs.py`. |
-| `spec/dummy/` | Rails app with the same schema and data, publishing the same servers through this gem. |
-| `spike/transport/` | M0 spike: the `mcp` gem's transport behind Django-style session rules. |
-| `PLAN.md` | Design, milestones, decisions and verified assumptions. |
-
-Run the parity check against the Rails app:
-
-```sh
-python -m venv .venv && .venv/bin/pip install -r spec/parity/requirements.txt
-spec/parity/bin/rails-server &                                                       # :3765
-.venv/bin/python spec/parity/client/mcp_parity.py check --base-url http://127.0.0.1:3765
-```
-
-[`spec/parity/README.md`](spec/parity/README.md) explains the suite, how to re-record the
-golden output, and the django-mcp-server behaviours it pins.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the repository layout, running the tests on each
+database, the compatibility test suite, and the project's status.
 
 ---
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Parts are derived from
-[django-mcp-server](https://github.com/omarbenhamid/django-mcp-server) by Omar BENHAMID,
-also MIT-licensed. Many thanks to its author and contributors.
+MIT, see [LICENSE](LICENSE).

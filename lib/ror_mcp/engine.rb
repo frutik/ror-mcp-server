@@ -8,6 +8,8 @@ module RorMcp
   class Engine < ::Rails::Engine
     engine_name "ror_mcp"
 
+    # lib/tasks/ror_mcp.rake (ror_mcp:describe, ror_mcp:check) is loaded by Rails::Engine itself.
+
     # Load app/mcp so collections register (autodiscovery of <app>/mcp.py in
     # django-mcp-server). On a development reload the registry is rebuilt and
     # servers pick up the new classes on their next request.
