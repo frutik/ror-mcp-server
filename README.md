@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Ruby](https://img.shields.io/badge/ruby-%3E%3D%203.2-red)
 ![Rails](https://img.shields.io/badge/rails-%3E%3D%207.1-red)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.1-blue)
 
 **ROR MCP Server** (`ror-mcp-server`) lets AI agents and **MCP clients** (Claude Code,
 MCP Inspector, the MCP SDKs, …) work with your **Ruby on Rails** app through the
@@ -19,7 +19,7 @@ It is a Rails port of [django-mcp-server](https://github.com/omarbenhamid/django
 by Omar BENHAMID, and speaks the same tools and query language.
 
 > [!NOTE]
-> **0.1.0**, tested in CI on Ruby 3.2–3.4, Rails 7.1–8.1 and SQLite, PostgreSQL and MySQL.
+> **0.1.1**, tested in CI on Ruby 3.2–3.4, Rails 7.1–8.1 and SQLite, PostgreSQL and MySQL.
 > It isn't on RubyGems yet: install it from GitHub.
 
 ---
@@ -68,7 +68,7 @@ by Omar BENHAMID, and speaks the same tools and query language.
 
 ```ruby
 # Gemfile
-gem "ror-mcp-server", github: "frutik/ror-mcp-server", tag: "v0.1.0"
+gem "ror-mcp-server", github: "frutik/ror-mcp-server", tag: "v0.1.1"
 ```
 
 ```sh

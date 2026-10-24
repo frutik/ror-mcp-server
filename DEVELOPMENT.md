@@ -21,7 +21,7 @@ and where the project stands. The full design, decisions and verified assumption
 
 ## Status
 
-0.1.0 is tagged (`v0.1.0`) and installable from GitHub; it isn't on RubyGems yet.
+0.1.1 is tagged (`v0.1.1`) and installable from GitHub; it isn't on RubyGems yet.
 Milestones from [PLAN.md §8](PLAN.md):
 
 | Milestone | Delivers | Status |
@@ -243,7 +243,7 @@ What it takes to match django-mcp-server byte for byte (details in
 Until 0.1.0 is on RubyGems, apps install from GitHub:
 
 ```ruby
-gem "ror-mcp-server", github: "frutik/ror-mcp-server", tag: "v0.1.0"
+gem "ror-mcp-server", github: "frutik/ror-mcp-server", tag: "v0.1.1"
 ```
 
 To cut a release: bump `lib/ror_mcp/version.rb`, move the CHANGELOG entry under the version,

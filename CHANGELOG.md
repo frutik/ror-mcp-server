@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — 2026-10-24
+
+Version bump only; no functional changes since 0.1.0.
+
 ## 0.1.0 — 2026-10-24
 
 First release: a Rails port of [django-mcp-server](https://github.com/omarbenhamid/django-mcp-server).
