@@ -5,3 +5,4 @@ spec/parity/django_app/db.sqlite3
 /vendor/bundle
 /.bundle
 *.gem
+/gemfiles/*.lock

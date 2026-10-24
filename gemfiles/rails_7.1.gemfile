@@ -1,0 +1,12 @@
+# frozen_string_literal: true
+
+# CI: BUNDLE_GEMFILE=gemfiles/rails_7.1.gemfile bundle exec rspec
+source "https://rubygems.org"
+
+gemspec path: ".."
+
+gem "activerecord", "~> 7.1.0"
+gem "railties", "~> 7.1.0"
+gem "sqlite3", "~> 1.4"
+
+eval_gemfile "common.gemfile"

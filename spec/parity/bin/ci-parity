@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Start the dummy app and check it against the golden set for its database
+# (DATABASE_URL: empty = SQLite, postgres://…, trilogy://… / mysql2://…) and
+# semantics (RORMCP_SEMANTICS: parity | fixed). Needs only Ruby and python3.
+#   spec/parity/bin/ci-parity [port]   (default 3765)
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+PORT="${1:-3765}"
+LOG="$(mktemp)"
+
+case "${DATABASE_URL:-}" in
+  postgres*) suffix="-postgresql" ;;
+  trilogy*|mysql*) suffix="-mysql" ;;
+  *) suffix="" ;;
+esac
+if [ "${RORMCP_SEMANTICS:-parity}" = "fixed" ]; then expected="fixed$suffix"; else expected="django$suffix"; fi
+
+"$ROOT/spec/parity/bin/rails-server" "$PORT" >"$LOG" 2>&1 &
+server=$!
+trap 'kill "$server" 2>/dev/null || true' EXIT
+
+for _ in $(seq 1 120); do
+  if curl -fs -o /dev/null "http://127.0.0.1:$PORT/up"; then break; fi
+  if ! kill -0 "$server" 2>/dev/null; then cat "$LOG"; echo "dummy app exited before serving"; exit 1; fi
+  sleep 1
+done
+
+echo "Checking spec/dummy (${DATABASE_URL:-sqlite}, ${RORMCP_SEMANTICS:-parity}) against spec/parity/expected/$expected"
+if ! python3 "$ROOT/spec/parity/client/mcp_parity.py" check --base-url "http://127.0.0.1:$PORT" \
+     --expected "$ROOT/spec/parity/expected/$expected"; then
+  echo "--- dummy app log ---"; tail -n 200 "$LOG"
+  exit 1
+fi

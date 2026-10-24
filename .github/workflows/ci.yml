@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  specs:
+    name: specs (Ruby ${{ matrix.ruby }}, Rails ${{ matrix.rails }}, ${{ matrix.db }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { ruby: "3.2", rails: "7.1", db: sqlite }
+          - { ruby: "3.2", rails: "7.1", db: postgresql }
+          - { ruby: "3.2", rails: "7.1", db: mysql }
+          - { ruby: "3.3", rails: "7.2", db: sqlite }
+          - { ruby: "3.4", rails: "8.0", db: sqlite }
+          - { ruby: "3.4", rails: "8.1", db: sqlite }
+          - { ruby: "3.4", rails: "8.1", db: postgresql }
+          - { ruby: "3.4", rails: "8.1", db: mysql }
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: ror_mcp_test }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      mysql:
+        image: mysql:8.4
+        env: { MYSQL_ALLOW_EMPTY_PASSWORD: "yes", MYSQL_DATABASE: ror_mcp_test }
+        ports: ["3306:3306"]
+        options: --health-cmd "mysqladmin ping -h 127.0.0.1" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      BUNDLE_GEMFILE: gemfiles/rails_${{ matrix.rails }}.gemfile
+      RORMCP_TEST_DATABASE_URL: >-
+        ${{ matrix.db == 'postgresql' && 'postgres://postgres:postgres@127.0.0.1:5432/ror_mcp_test'
+         || matrix.db == 'mysql' && 'trilogy://root@127.0.0.1:3306/ror_mcp_test' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - run: bundle exec rspec
+
+  parity:
+    # The dummy app against the answers recorded from the Django reference app
+    # (:parity) or reviewed :fixed answers, per database. No Django needed.
+    name: parity (${{ matrix.db }}, ${{ matrix.semantics }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [sqlite, postgresql, mysql]
+        semantics: [parity, fixed]
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: ror_mcp_dummy }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      mysql:
+        image: mysql:8.4
+        env: { MYSQL_ALLOW_EMPTY_PASSWORD: "yes", MYSQL_DATABASE: ror_mcp_dummy }
+        ports: ["3306:3306"]
+        options: --health-cmd "mysqladmin ping -h 127.0.0.1" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      RORMCP_SEMANTICS: ${{ matrix.semantics }}
+      DATABASE_URL: >-
+        ${{ matrix.db == 'postgresql' && 'postgres://postgres:postgres@127.0.0.1:5432/ror_mcp_dummy'
+         || matrix.db == 'mysql' && 'trilogy://root@127.0.0.1:3306/ror_mcp_dummy' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+          working-directory: spec/dummy
+      - run: spec/parity/bin/ci-parity
