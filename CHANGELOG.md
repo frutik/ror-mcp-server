@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Docs and the collection generator write `instructions` as a quoted heredoc (`<<~'TXT'`): in an interpolating
+  one, Ruby reads `#$name` / `#@name` in pipeline examples as variables and the text silently loses them.
 - `:fixed`: a `$lookup` that names a second collection for a reference another `$lookup` already joined is now
   rejected. Such a query used to read one collection's rows under the other's fields, so a more restricted
   collection could expose rows its `scope` excludes. One collection under several aliases still works.

@@ -31,13 +31,15 @@ RSpec.describe "generators" do
 
   it "ror_mcp:collection writes a namespaced collection with fields and server" do
     run(RorMcp::Generators::CollectionGenerator, "Sales::Order", "--fields", "id", "number", "customer", "--server", "sales")
-    expect(read("app/mcp/sales/order_collection.rb")).to eq(<<~RUBY)
+    expect(read("app/mcp/sales/order_collection.rb")).to eq(<<~'RUBY')
       class Sales::OrderCollection < RorMcp::Collection
         server :sales
         model Sales::Order
         fields :id, :number, :customer
         # description "What one row is."                 # schema description clients see
-        # instructions "When to query this collection, and what the values mean."
+        # instructions <<~'TXT'                          # quoted: "#$x" in pipeline examples stays literal
+        #   When to query this collection, and what the values mean.
+        # TXT
         # search_fields :name                            # $text / $search (default: string columns in fields)
 
         # Rows this collection exposes; context comes from the authenticate block.
