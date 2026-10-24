@@ -16,7 +16,7 @@ jobs:
     name: bundler-audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
@@ -56,7 +56,7 @@ jobs:
         ${{ matrix.db == 'postgresql' && 'postgres://postgres:postgres@127.0.0.1:5432/ror_mcp_test'
          || matrix.db == 'mysql' && 'trilogy://root@127.0.0.1:3306/ror_mcp_test' || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
@@ -90,7 +90,7 @@ jobs:
         ${{ matrix.db == 'postgresql' && 'postgres://postgres:postgres@127.0.0.1:5432/ror_mcp_dummy'
          || matrix.db == 'mysql' && 'trilogy://root@127.0.0.1:3306/ror_mcp_dummy' || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
