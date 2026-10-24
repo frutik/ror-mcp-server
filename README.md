@@ -97,12 +97,16 @@ This creates `config/initializers/ror_mcp.rb`, mounts the server at `/mcp` and c
 RorMcp.configure do |c|
   c.default_server name: "myapp", instructions: "Data of MyApp. Query it with query_data_collections."
 
-  c.authenticate do |request|              # return a context, or nil for 401
-    key = ApiKey.find_by(token: request.authorization.to_s.delete_prefix("Bearer "))
-    key && { user: key.user }
+  # Every request must carry "Authorization: Bearer <MCP_TOKEN>"; anything else gets 401.
+  c.authenticate do |request|
+    token = request.authorization.to_s.delete_prefix("Bearer ")
+    ActiveSupport::SecurityUtils.secure_compare(token, ENV.fetch("MCP_TOKEN")) && { client: :mcp }
   end
 end
 ```
+
+This uses one shared token. For per-user tokens and how the returned context is used, see
+[Authentication](#authentication).
 
 ```ruby
 # config/routes.rb
@@ -456,20 +460,78 @@ registered by server and name, not by class name, so classes in different module
 
 ### Authentication
 
-`authenticate` receives the `ActionDispatch::Request` and returns a context object, or
-`nil` to answer `401` with `WWW-Authenticate: Bearer`. The context is passed to collection
-scopes and tools.
+The gem doesn't manage credentials; you decide who may connect. On every MCP request, the
+`authenticate` block receives the `ActionDispatch::Request`:
+
+- Return `nil` or `false`, and the client gets `401` with `WWW-Authenticate: Bearer`.
+  Nothing else runs.
+- Return anything else, for example `{ user: user }`, and the request goes through.
+  That value is the **context**: it's passed to every collection's `scope(context)` and
+  is available as `context` in tools, so results can depend on who is asking.
+
+Without `c.authenticate`, the server is open to anyone who can reach it.
+
+Clients send the token as a header, for example:
+
+```sh
+claude mcp add --transport http myapp https://myapp.example/mcp --header "Authorization: Bearer <token>"
+```
+
+**One shared token** (personal or internal servers):
 
 ```ruby
-RorMcp.configure do |c|
-  c.authenticate do |request|                         # every server…
-    token = request.authorization.to_s.delete_prefix("Bearer ")
-    (user = User.find_by_api_token(token)) && { user: user }
+c.authenticate do |request|
+  token = request.authorization.to_s.delete_prefix("Bearer ")
+  ActiveSupport::SecurityUtils.secure_compare(token, ENV.fetch("MCP_TOKEN")) && { client: :mcp }
+end
+```
+
+**A token per user.** `ApiKey` here is a model in *your* app, not part of the gem:
+
+```sh
+bin/rails g model ApiKey user:references token_digest:string:uniq
+```
+
+```ruby
+class ApiKey < ApplicationRecord
+  belongs_to :user
+
+  # Show the returned token to the user once; only its digest is stored.
+  def self.issue!(user)
+    token = SecureRandom.hex(32)
+    create!(user: user, token_digest: Digest::SHA256.hexdigest(token))
+    token
   end
 
-  c.server :partners, name: "partners",               # …unless it sets its own
-           authenticate: ->(request) { Partner.authenticate(request) }
+  def self.authenticate(token)
+    token.present? && find_by(token_digest: Digest::SHA256.hexdigest(token))
+  end
 end
+```
+
+```ruby
+c.authenticate do |request|
+  key = ApiKey.authenticate(request.authorization.to_s.delete_prefix("Bearer "))
+  key && { user: key.user }
+end
+```
+
+```ruby
+class OrderCollection < RorMcp::Collection
+  model Order
+  fields :id, :number, :total
+  def scope(context) = Order.where(account: context[:user].account)   # each caller sees only their orders
+end
+```
+
+**Existing authentication:** if your users already have API tokens (a column, Devise token
+auth, …), look the user up the same way and return `{ user: user }`.
+
+**Per server:** `c.authenticate` applies to every server unless a server sets its own:
+
+```ruby
+c.server :partners, name: "partners", authenticate: ->(request) { Partner.authenticate(request) }
+c.server :public,   name: "public",   authenticate: false   # no authentication on this one
 ```
 
 Endpoints are plain Rack apps: no cookies and no CSRF checks. Host checks are left to

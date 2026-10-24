@@ -3,11 +3,12 @@ RorMcp.configure do |c|
   c.default_server name: "<%= server_name %>",
                    instructions: "Data of <%= server_name %>. Query it with query_data_collections."
 
-  # Return a context for an authorized request (passed to collection scopes and tools), or nil for 401.
+  # Who may connect. Return a context for an allowed request (passed to collection scopes
+  # and tools), or nil for 401. Without this block the server is open. Per-user tokens:
+  # see "Authentication" in the ror-mcp-server README.
   # c.authenticate do |request|
   #   token = request.authorization.to_s.delete_prefix("Bearer ")
-  #   key = ApiKey.find_by(token: token)
-  #   key && { user: key.user }
+  #   ActiveSupport::SecurityUtils.secure_compare(token, ENV.fetch("MCP_TOKEN")) && { client: :mcp }
   # end
 
   # More servers: c.server :reports, name: "<%= server_name %>-reports", stateless: true
