@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sessions: a session id is issued only when `initialize` succeeds (a malformed one used to allocate a session that
+  never went away). `:memory` sessions now expire (14 days, like `:cache`) and are capped at 10,000, oldest first;
+  `SessionStore::Memory.new(expires_in:, max:)` sets other bounds.
+- New `c.max_request_bytes` (4 MiB): a larger POST body gets 413. The endpoint reads the body with that bound once,
+  before parsing; it used to read and parse the whole body to spot `initialize`, ahead of the SDK's own bound.
 - Endpoints validate `Origin`, as the MCP transport spec requires: a browser request from another origin gets 403
   before authentication, for every method. Requests without `Origin` (non-browser clients) and from the server's
   own origin pass. New `c.allowed_origins` (global, or `allowed_origins:` per server; `:any` turns it off). The

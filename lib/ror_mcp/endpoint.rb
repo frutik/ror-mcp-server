@@ -9,9 +9,10 @@ module RorMcp
   #
   #   Origin       → 403 for a browser page on an origin not allowed (MCP transport spec)
   #   authenticate → 401 + WWW-Authenticate: Bearer when it returns nil
+  #   POST body    → 413 past max_request_bytes, read with that bound before anything parses it
   #   DELETE       → forget the session, 200
-  #   stateful     → Mcp-Session-Id rules: unknown id 404; no id: issue one on
-  #                  `initialize`, otherwise 400
+  #   stateful     → Mcp-Session-Id rules: unknown id 404; no id: issue one when
+  #                  `initialize` succeeds, otherwise 400
   #   then the SDK transport (stateless, JSON responses) answers the request.
   #
   # The server is looked up per request, so routes can be drawn before
@@ -41,22 +42,23 @@ module RorMcp
         env[MCP::Server::OAuth::ENV_KEY] = context
       end
 
+      return text_response(413, "Request body too large") unless bound_body!(env)
       return delete_session(server, env) if env["REQUEST_METHOD"] == "DELETE"
       return server.transport.call(env) if server.stateless?
 
       session_id = env[SESSION_ENV].to_s
       if !session_id.empty?
         return text_response(404, "Session not found") unless server.sessions.exists?(session_id)
-      elsif initialize_request?(env)
-        session_id = server.sessions.create
-      else
-        return text_response(400, "Session required for stateful server")
-      end
 
-      # The SDK runs stateless and must not try to resolve our session id.
-      env.delete(SESSION_ENV)
-      status, headers, body = server.transport.call(env)
-      [status, headers.merge(SESSION_HEADER => session_id), body]
+        # The SDK runs stateless and must not try to resolve our session id.
+        env.delete(SESSION_ENV)
+        status, headers, body = server.transport.call(env)
+        [status, headers.merge(SESSION_HEADER => session_id), body]
+      elsif initialize_request?(env)
+        start_session(server, env)
+      else
+        text_response(400, "Session required for stateful server")
+      end
     ensure
       RorMcp.current_request = nil
     end
@@ -78,6 +80,35 @@ module RorMcp
       origin == request.base_url.downcase || server.allowed_origins.include?(origin)
     end
 
+    # A session exists once `initialize` succeeded: a refused or malformed one
+    # allocates nothing.
+    def start_session(server, env)
+      status, headers, body = server.transport.call(env)
+      parts = body.enum_for(:each).to_a # a Rack body promises #each, not #map
+      body.close if body.respond_to?(:close)
+      payload = JSON.parse(parts.join)
+      return [status, headers, parts] unless status == 200 && payload.is_a?(Hash) && payload.key?("result")
+
+      [status, headers.merge(SESSION_HEADER => server.sessions.create), parts]
+    rescue JSON::ParserError
+      [status, headers, parts]
+    end
+
+    # Reads a POST body once, at most max_request_bytes (one more tells it is
+    # over), before anything parses it; the transport then reads this copy.
+    def bound_body!(env)
+      limit = RorMcp.configuration.max_request_bytes
+      input = env["rack.input"]
+      return true if limit.nil? || input.nil? || env["REQUEST_METHOD"] != "POST"
+      return false if env["CONTENT_LENGTH"].to_i > limit
+
+      body = input.read(limit + 1).to_s
+      return false if body.bytesize > limit
+
+      env["rack.input"] = StringIO.new(body)
+      true
+    end
+
     def delete_session(server, env)
       session_id = env[SESSION_ENV].to_s
       server.sessions.delete(session_id) if !server.stateless? && !session_id.empty?
@@ -90,7 +121,7 @@ module RorMcp
       return false unless input
 
       body = input.read
-      env["rack.input"] = StringIO.new(body)
+      env["rack.input"] = StringIO.new(body) # Rack 3 inputs needn't rewind
       payload = JSON.parse(body)
       payload.is_a?(Hash) && payload["method"] == "initialize"
     rescue JSON::ParserError

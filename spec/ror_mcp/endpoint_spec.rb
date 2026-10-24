@@ -53,6 +53,8 @@ RSpec.describe RorMcp::Endpoint do
     last_response
   end
 
+  def rpc_env = { "CONTENT_TYPE" => "application/json", "HTTP_ACCEPT" => "application/json, text/event-stream" }
+
   def initialize_params(version = "2025-03-26")
     { protocolVersion: version, capabilities: {}, clientInfo: { name: "spec", version: "0" } }
   end
@@ -237,6 +239,40 @@ RSpec.describe RorMcp::Endpoint do
       expect { RorMcp.configure { |c| c.allowed_origins = ["https://app.example.com/mcp"] } }
         .to raise_error(RorMcp::ConfigurationError, /not an origin/)
       expect { RorMcp.configure { |c| c.allowed_origins = ["app.example.com"] } }.to raise_error(RorMcp::ConfigurationError)
+    end
+  end
+
+  describe "sessions and request bodies" do
+    let(:store) { RorMcp.server(:default).sessions }
+
+    it "allocates no session for an initialize that fails" do
+      expect do
+        3.times { post "/mcp", JSON.generate(jsonrpc: "2.0", id: 1, method: "initialize"), rpc_env }
+      end.not_to change(store, :size)
+      expect(last_response.headers["mcp-session-id"]).to be_nil
+      expect(JSON.parse(last_response.body)).to include("error")
+      expect(rpc("/mcp", "initialize", initialize_params).headers["mcp-session-id"]).to match(/\A\h{32}\z/)
+    end
+
+    it "refuses a body past max_request_bytes with 413, before reading more of it" do
+      RorMcp.configure { |c| c.max_request_bytes = 200 }
+      big = JSON.generate(jsonrpc: "2.0", id: 1, method: "initialize", params: { padding: "x" * 300 })
+      post "/mcp", big, rpc_env
+      expect(last_response.status).to eq(413)
+
+      # No Content-Length (chunked): the read itself is bounded.
+      input = StringIO.new(big)
+      allow(input).to receive(:read).and_call_original
+      env = Rack::MockRequest.env_for("/mcp", method: "POST", input: input, **rpc_env)
+      env.delete("CONTENT_LENGTH")
+      expect(RorMcp.endpoint.call(env).first).to eq(413)
+      expect(input).to have_received(:read).with(201).once
+    end
+
+    it "accepts bodies within the bound and validates the setting" do
+      RorMcp.configure { |c| c.max_request_bytes = 10_000 }
+      expect(rpc("/mcp", "initialize", initialize_params).status).to eq(200)
+      expect { RorMcp.configure { |c| c.max_request_bytes = 0 } }.to raise_error(RorMcp::ConfigurationError)
     end
   end
 end

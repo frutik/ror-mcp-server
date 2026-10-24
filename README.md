@@ -429,6 +429,7 @@ RorMcp.configure do |c|
   c.authenticate { |request| … }      # global: return a context or nil (401)
   c.allowed_origins    = []           # browser origins besides the server's own, or :any (403 otherwise)
   c.session_store      = :memory      # :memory | :cache (Rails.cache) | object with create/exists?/delete
+  c.max_request_bytes  = 4 * 1024 * 1024 # larger POST bodies get 413; nil = no bound
   c.instructions_tool  = true         # publish get_server_instructions
 
   c.read_role          = nil          # e.g. :reading, to run queries on a replica
@@ -564,13 +565,18 @@ production list the hosts your clients use (Rails only fills it in development).
 
 Servers are stateful by default:
 
-- `initialize` without a session gets a new `Mcp-Session-Id`.
+- A successful `initialize` without a session gets a new `Mcp-Session-Id`; a failed one gets none.
 - Any other request without one gets `400`, and an unknown or expired id gets `404`.
 - `DELETE` ends the session.
 
-`:memory` sessions live in one process. With several Puma workers or hosts, use
-`session_store = :cache` with a shared cache (Redis, Memcached, Solid Cache), or
-`stateless: true` on the server, which skips sessions entirely.
+`:memory` sessions live in one process, for 14 days, at most 10,000 of them: past that the
+oldest goes first, and its client gets `404` and initializes again. Other bounds:
+`c.session_store = RorMcp::SessionStore::Memory.new(expires_in: 1.day, max: 1_000)`. With
+several Puma workers or hosts, use `session_store = :cache` with a shared cache (Redis,
+Memcached, Solid Cache), or `stateless: true` on the server, which skips sessions entirely.
+
+A POST body larger than `c.max_request_bytes` (4 MiB) gets `413`. It is read with that bound
+before anything parses it.
 
 ### Output formats
 
