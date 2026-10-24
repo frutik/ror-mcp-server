@@ -66,6 +66,17 @@ module RorMcp
         setting(:tools) || {}
       end
 
+      # The databases the tools use besides ActiveRecord::Base's: the classes
+      # holding their connections (abstract records or models). Read-only tools
+      # then run in a rolled-back read-only transaction on each one as well.
+      #
+      #   databases AnalyticsRecord
+      def databases(*classes)
+        return setting(:databases) || [] if classes.empty?
+
+        @databases = classes
+      end
+
       def abstract!
         @abstract = true
       end
@@ -79,6 +90,11 @@ module RorMcp
       end
 
       def validate!
+        databases.each do |database|
+          next if database.is_a?(Class) && database <= ActiveRecord::Base
+
+          raise ConfigurationError, "#{name}: databases takes ActiveRecord classes, got #{database.inspect}"
+        end
         tools.each_key do |tool_name|
           next if method_defined?(tool_name)
 
@@ -145,7 +161,7 @@ module RorMcp
         value = serialize(tool.serialize_with, value) if tool.serialize_with
         value.is_a?(MCP::Tool::Response) ? value : MCP::Tool::Response.new(Tools::Content.from(value))
       end
-      tool.writes ? invoke.call : Envelope.read_only(&invoke)
+      tool.writes ? invoke.call : Envelope.read_only_on(databases, &invoke)
     rescue StandardError => e
       MCP::Tool::Response.new([{ type: "text", text: "Error executing tool #{tool.name}: #{e.message}" }], error: true)
     end

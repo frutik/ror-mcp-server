@@ -11,6 +11,10 @@
 - A collection `scope` with `limit` or `offset` now bounds the collection's rows. Pipeline stages used to replace
   that window (`limit(0)` published every row, a `$match` reached rows past the limit); the scope is now a derived
   table that stages work inside, in both semantics.
+- Read-only tools: Rails' write check now applies even when `ActiveRecord::Base` has no connection (it used to be
+  skipped along with the rest of the envelope). New `databases AnalyticsRecord, …` on a toolset: read-only tools
+  also get a rolled-back read-only transaction on those databases, and a listed database without a connection
+  fails the call.
 - `:fixed`: a `$match` or `$sort` after a `$limit`/`$skip` window taken without `$sort` no longer fails with
   "The method .reorder() must contain arguments".
 
