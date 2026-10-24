@@ -89,6 +89,29 @@ RSpec.describe "fixed semantics" do
       expect(rows([lookup, { "$match" => { "c.name" => "Gijs" } }])).to eq([])
     end
 
+    it "applies scopes that restrict rows without a WHERE on the relation" do
+      # Each hides Gijs (customer 3, order 4) in its own way.
+      scopes = {
+        "a FROM subquery" => -> { ShopDb::Customer.from(ShopDb::Customer.where(active: true), :customers) },
+        "an offset" => -> { ShopDb::Customer.order(id: :desc).offset(1) },
+        "a HAVING" => -> { ShopDb::Customer.group(:id).having(Arel.sql("MAX(CASE WHEN active THEN 1 ELSE 0 END) = 1")) },
+      }
+      aggregate_failures do
+        scopes.each do |label, scope|
+          customers.define_method(:scope) { |_context| scope.call }
+          who = rows([lookup, { "$match" => { "_id" => 4 } }, { "$project" => { "who" => "$c.name" } }])
+          expect(who).to eq([{ "who" => nil }]), "#{label}: #{who.inspect}"
+        end
+      end
+    end
+
+    it "joins the bare table for an unrestricted scope, ordering or not" do
+      customers.define_method(:scope) { |_context| ShopDb::Customer.order(:name) }
+      catalog = RorMcp::Pipeline::Catalog.new(orders, collections, semantics: :fixed)
+      expect(catalog.join_scope(customers)).to be_nil
+      expect(rows([lookup, { "$match" => { "_id" => 4 } }, { "$project" => { "who" => "$c.name" } }])).to eq([{ "who" => "Gijs" }])
+    end
+
     context "with two collections over one model" do
       before do
         define_collection("Products") { model ShopDb::Product; collection_name "product"; fields :sku, :category }
