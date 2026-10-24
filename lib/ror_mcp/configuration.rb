@@ -10,11 +10,15 @@ module RorMcp
 
     # One declared server. `authenticate` is nil to inherit the global block,
     # false to disable authentication, or a callable(request) → context | nil.
-    ServerConfig = Struct.new(:key, :name, :instructions, :stateless, :authenticate, keyword_init: true)
+    # `allowed_origins` is nil to inherit the global list.
+    ServerConfig = Struct.new(:key, :name, :instructions, :stateless, :authenticate, :allowed_origins, keyword_init: true)
 
     DESCRIPTION_BUDGET_MODES = %i[warn raise].freeze
 
-    attr_reader :servers, :pipeline_semantics, :description_budget_mode, :query_subscribers, :tool_subscribers
+    attr_reader :servers, :pipeline_semantics, :description_budget_mode, :query_subscribers, :tool_subscribers,
+                # Browser origins besides the server's own that may call it ("https://app.example.com"),
+                # or :any. Requests without an Origin header (non-browser clients) always pass.
+                :allowed_origins
     attr_accessor :session_store, :instructions_tool,
                   # Safety envelope (PLAN §5), both semantics:
                   :read_role,          # run queries under connected_to(role:), e.g. :reading for a replica
@@ -39,7 +43,26 @@ module RorMcp
       @description_budget_mode = :warn
       @query_subscribers = []
       @tool_subscribers = []
+      @allowed_origins = []
       default_server
+    end
+
+    def allowed_origins=(origins)
+      @allowed_origins = Configuration.origins(origins)
+    end
+
+    # :any, or origins normalized for comparison ("scheme://host[:port]", lowercase).
+    def self.origins(origins)
+      return :any if origins == :any
+
+      Array(origins).map do |origin|
+        normalized = origin.to_s.downcase.chomp("/")
+        unless normalized == "null" || normalized.match?(%r{\Ahttps?://[^/?#\s]+\z})
+          raise ConfigurationError, "allowed_origins: #{origin.inspect} is not an origin (scheme://host[:port], no path), :any or \"null\""
+        end
+
+        normalized
+      end
     end
 
     def description_budget_mode=(mode)
@@ -64,7 +87,7 @@ module RorMcp
       server(:default, **options)
     end
 
-    def server(key, name: nil, instructions: nil, stateless: false, authenticate: nil)
+    def server(key, name: nil, instructions: nil, stateless: false, authenticate: nil, allowed_origins: nil)
       key = key.to_sym
       @servers[key] = ServerConfig.new(
         key: key,
@@ -72,6 +95,7 @@ module RorMcp
         instructions: instructions,
         stateless: stateless,
         authenticate: authenticate,
+        allowed_origins: allowed_origins.nil? ? nil : Configuration.origins(allowed_origins),
       )
     end
 
@@ -95,6 +119,10 @@ module RorMcp
       @servers.fetch(key.to_sym) do
         raise ConfigurationError, "Unknown MCP server #{key.inspect}. Declared servers: #{@servers.keys.join(', ')}"
       end
+    end
+
+    def allowed_origins_for(server_config)
+      server_config.allowed_origins.nil? ? @allowed_origins : server_config.allowed_origins
     end
 
     # The authenticator a server uses after applying its own override.

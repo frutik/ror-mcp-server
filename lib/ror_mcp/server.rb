@@ -16,7 +16,7 @@ module RorMcp
     INSTRUCTIONS_TOOL_NAME = "get_server_instructions"
     INSTRUCTIONS_TOOL_DESCRIPTION = "Return MCP server instructions (if any). Always call first."
 
-    attr_reader :key, :name, :instructions, :authenticator, :sessions
+    attr_reader :key, :name, :instructions, :authenticator, :sessions, :allowed_origins
 
     def initialize(server_config, configuration)
       @key = server_config.key
@@ -24,6 +24,7 @@ module RorMcp
       @instructions = server_config.instructions
       @stateless = server_config.stateless
       @authenticator = configuration.authenticator_for(server_config)
+      @allowed_origins = configuration.allowed_origins_for(server_config)
       @sessions = SessionStore.build(configuration.session_store) unless @stateless
       @instructions_tool = configuration.instructions_tool
       @configuration = configuration
@@ -70,9 +71,9 @@ module RorMcp
     end
 
     # The SDK always runs stateless with JSON responses, as django-mcp-server runs
-    # the Python SDK: Mcp-Session-Id handling lives in RorMcp::Endpoint. Host and
-    # Origin checks are left to Rails (config.hosts): the SDK's DNS-rebinding guard
-    # only accepts loopback Host headers.
+    # the Python SDK: Mcp-Session-Id handling lives in RorMcp::Endpoint. The SDK's
+    # DNS-rebinding guard only accepts loopback Host headers, so it is off: Host is
+    # Rails' config.hosts, Origin is RorMcp::Endpoint (allowed_origins).
     def transport
       server = mcp_server
       @mutex.synchronize do

@@ -11,6 +11,10 @@ RorMcp.configure do |c|
   #   ActiveSupport::SecurityUtils.secure_compare(token, ENV.fetch("MCP_TOKEN")) && { client: :mcp }
   # end
 
+  # Browser apps on another origin that may call the server (non-browser clients and the
+  # app's own pages need nothing here; other origins get 403).
+  # c.allowed_origins = ["https://app.example.com"]
+
   # More servers: c.server :reports, name: "<%= server_name %>-reports", stateless: true
   # and in config/routes.rb: mount RorMcp.endpoint(:reports), at: "/mcp/reports" (before /mcp).
 

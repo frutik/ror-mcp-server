@@ -427,6 +427,7 @@ RorMcp.configure do |c|
            authenticate: ->(request) { … }   # per server: a callable, or false for none
 
   c.authenticate { |request| … }      # global: return a context or nil (401)
+  c.allowed_origins    = []           # browser origins besides the server's own, or :any (403 otherwise)
   c.session_store      = :memory      # :memory | :cache (Rails.cache) | object with create/exists?/delete
   c.instructions_tool  = true         # publish get_server_instructions
 
@@ -545,8 +546,19 @@ c.server :partners, name: "partners", authenticate: ->(request) { Partner.authen
 c.server :public,   name: "public",   authenticate: false   # no authentication on this one
 ```
 
-Endpoints are plain Rack apps: no cookies and no CSRF checks. Host checks are left to
-Rails' `config.hosts`, so make sure the host your clients use is allowed.
+Endpoints are plain Rack apps: no cookies and no CSRF checks.
+
+**Browsers.** MCP clients that aren't browsers send no `Origin` header and are unaffected. A
+request from a web page carries its `Origin`: the server's own origin is accepted, any other
+gets `403 Origin not allowed`, before authentication. List the browser apps that may call it:
+
+```ruby
+c.allowed_origins = ["https://app.example.com"]                 # every server
+c.server :widget, name: "widget", allowed_origins: :any         # this one: no Origin check
+```
+
+`Host` is checked by Rails' `config.hosts`, not here. That is what stops DNS rebinding, so in
+production list the hosts your clients use (Rails only fills it in development).
 
 ### Sessions
 

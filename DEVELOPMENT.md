@@ -249,7 +249,8 @@ What it takes to match django-mcp-server byte for byte (details in
   `isError` results themselves.
 - **Transport.** The SDK runs stateless with JSON responses, and `Endpoint` applies
   Django's session rules in front of it (see [spike/transport/README.md](spike/transport/README.md)).
-  The SDK's DNS-rebinding guard is off; Rails' `config.hosts` covers it.
+  The SDK's DNS-rebinding guard is off (it only accepts loopback `Host` headers): `Host` is
+  Rails' `config.hosts`, `Origin` is `Endpoint` (`allowed_origins`, ADR 0012).
 - **Database differences** are handled per adapter: `REGEXP` function on SQLite,
   `~`/`~*` on PostgreSQL, `REGEXP_LIKE` on MySQL; date parts via `strftime`/`EXTRACT`/`DAYOFWEEK`;
   read-only mode via `PRAGMA query_only` / `SET TRANSACTION READ ONLY`.

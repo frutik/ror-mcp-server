@@ -199,4 +199,44 @@ RSpec.describe RorMcp::Endpoint do
       expect(rpc("/mcp/analytics", "initialize", initialize_params, headers: auth).status).to eq(200)
     end
   end
+
+  # MCP transport spec: servers must validate Origin and answer 403 for an invalid one.
+  # rack-test requests come from http://example.org.
+  describe "Origin" do
+    def initialize_from(origin, path = "/mcp", headers: {})
+      rpc(path, "initialize", initialize_params, headers: headers.merge("Origin" => origin)).status
+    end
+
+    it "accepts requests without Origin (non-browser clients) and from the server's own origin" do
+      expect(rpc("/mcp", "initialize", initialize_params).status).to eq(200)
+      expect(initialize_from("http://example.org")).to eq(200)
+      expect(initialize_from("HTTP://Example.org/")).to eq(200)
+    end
+
+    it "refuses any other origin with 403, before authentication and for every method" do
+      expect(initialize_from("https://evil.example")).to eq(403)
+      expect(last_response.body).to eq("Origin not allowed")
+      expect(initialize_from("https://evil.example", "/mcp/analytics")).to eq(403)
+      expect(initialize_from("http://example.org:8080")).to eq(403)
+      expect(initialize_from("null")).to eq(403)
+      delete "/mcp", nil, "HTTP_ORIGIN" => "https://evil.example", "HTTP_MCP_SESSION_ID" => "x"
+      expect(last_response.status).to eq(403)
+    end
+
+    it "accepts listed origins, globally or per server, and :any" do
+      RorMcp.configure do |c|
+        c.allowed_origins = ["https://App.example.com"]
+        c.server :analytics, name: "parity-analytics", stateless: true, allowed_origins: :any
+      end
+      expect(initialize_from("https://app.example.com")).to eq(200)
+      expect(initialize_from("https://other.example")).to eq(403)
+      expect(initialize_from("https://other.example", "/mcp/analytics")).to eq(200)
+    end
+
+    it "rejects allowed_origins that aren't origins" do
+      expect { RorMcp.configure { |c| c.allowed_origins = ["https://app.example.com/mcp"] } }
+        .to raise_error(RorMcp::ConfigurationError, /not an origin/)
+      expect { RorMcp.configure { |c| c.allowed_origins = ["app.example.com"] } }.to raise_error(RorMcp::ConfigurationError)
+    end
+  end
 end
