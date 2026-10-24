@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Documented: a collection's primary key is always addressable as `_id` / `pk`, even when `fields` leaves it out
+  (`fields` decides whether rows and the schema show it). `:fixed`: `alias._id` after a `$lookup` now means the
+  joined collection's primary key, like `alias.pk`; it used to fail.
 - Sessions: a session id is issued only when `initialize` succeeds (a malformed one used to allocate a session that
   never went away). `:memory` sessions now expire (14 days, like `:cache`) and are capped at 10,000, oldest first;
   `SessionStore::Memory.new(expires_in:, max:)` sets other bounds.

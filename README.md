@@ -252,7 +252,7 @@ set with `collection_name`.
 
 | Stage | What it does |
 |---|---|
-| `$match` | Filters. A literal value means equality. Operators: `$eq $ne $gt $gte $lt $lte $in $nin $regex`, `$and $or $nor`, and any operator a collection enables with `extra_filters`. `null` matches NULL. `_id` is the primary key. |
+| `$match` | Filters. A literal value means equality. Operators: `$eq $ne $gt $gte $lt $lte $in $nin $regex`, `$and $or $nor`, and any operator a collection enables with `extra_filters`. `null` matches NULL. `_id` is the primary key, available whether or not `fields` lists it. |
 | `$match: {$text: {$search: "…"}}` | Full-text search: every word must match at least one search field, case-insensitively. |
 | `$search: {text: {query, path?}}` | The same search, optionally limited to some search fields. |
 | `$lookup` | Joins a `belongs_to` target: `{from, localField, foreignField: "_id", as}`. Later stages use `as.field`. A reference joins one collection per query: two `$lookup`s may share it only with the same `from`. |
@@ -353,7 +353,7 @@ end
 | `server` | Which server publishes the collection. The same model can be published on several servers. |
 | `model` | The ActiveRecord model. |
 | `collection_name` | The name clients use. Two collections can't share a name on one server. |
-| `fields` | Published columns and `belongs_to` associations. Only these can be filtered, sorted, projected or grouped, also through `$lookup`. Required, so wide models don't bloat the description by accident. |
+| `fields` | Published columns and `belongs_to` associations. Only these can be filtered, sorted, projected or grouped, also through `$lookup`. Required, so wide models don't bloat the description by accident. The primary key is the exception: it is always addressable as `_id` (or `pk`, and `alias._id` after a `$lookup`), even when `fields` leaves it out; `fields` only decides whether rows and the schema show it. So don't publish a model whose primary key is itself sensitive (an email, a national ID). |
 | `exclude_fields` | Fields to leave out. |
 | `search_fields` | Columns used by `$text` / `$search`. |
 | `extra_filters` | Extra `$match` operators: `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `iexact`, `iregex`, `range`, `date`, `year`, `month`, `day`, `hour`, `minute`, `second`, `week_day`, `quarter`. Use as `{"number": {"$icontains": "x"}}`. |
