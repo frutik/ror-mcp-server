@@ -22,6 +22,8 @@ by Omar BENHAMID, and speaks the same tools and query language.
 > **0.1.3**, tested in CI on Ruby 3.2–3.4, Rails 7.1–8.1 and SQLite, PostgreSQL and MySQL.
 > It isn't on RubyGems yet: install it from GitHub.
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/frutik-ror-mcp-server-13z3l2?v=61a449421079312168e6b284a66a0419)](https://m8ven.ai/mcp/frutik-ror-mcp-server-13z3l2?s=readme)
+
 ---
 
 ## Contents
