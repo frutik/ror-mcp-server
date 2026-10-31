@@ -426,7 +426,8 @@ end
 RorMcp.configure do |c|
   c.default_server name: "myapp", instructions: "…", stateless: false
   c.server :reports, name: "myapp-reports", instructions: "…", stateless: true,
-           authenticate: ->(request) { … }   # per server: a callable, or false for none
+           authenticate: ->(request) { … },  # per server: a callable, or false for none
+           icons: [{ src: "https://…/icon.png", mimeType: "image/png" }] # shown by clients, see Server icons
 
   c.authenticate { |request| … }      # global: return a context or nil (401)
   c.allowed_origins    = []           # browser origins besides the server's own, or :any (403 otherwise)
@@ -478,6 +479,23 @@ mount RorMcp::Engine,            at: "/mcp"   # the default server
 
 Collections and toolsets choose their server with `server :sales`. Collections are
 registered by server and name, not by class name, so classes in different modules never clash.
+
+### Server icons
+
+Clients can show an icon next to your server's name. Give each server a list of icons:
+
+```ruby
+c.default_server name: "myapp", icons: [
+  { src: "https://myapp.example.com/mcp-icon.png", mimeType: "image/png", sizes: ["64x64"] },
+  { src: "https://myapp.example.com/mcp-icon-dark.svg", mimeType: "image/svg+xml", sizes: ["any"], theme: "dark" },
+]
+```
+
+Each icon needs `src`, which should be an HTTPS URL or a `data:` URI. `mimeType`, `sizes` and `theme`
+(`"light"` or `"dark"`) are optional and help the client choose an icon. A malformed icon
+raises `RorMcp::ConfigurationError` from `RorMcp.configure`. Icons are sent in `serverInfo` only
+to clients that negotiate MCP protocol version 2025-11-25 or later. Older clients don't get them,
+and whether a client displays them is up to the client.
 
 ### Authentication
 

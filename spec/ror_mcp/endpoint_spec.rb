@@ -21,7 +21,8 @@ RSpec.describe RorMcp::Endpoint do
     RorMcp.configure do |c|
       c.default_server name: "parity-shop", instructions: "Reference shop server."
       c.server :analytics, name: "parity-analytics", instructions: "Reporting server.", stateless: true,
-                           authenticate: ->(request) { request.get_header("HTTP_AUTHORIZATION") == "Bearer s3cret" && { token: "analytics" } }
+                           authenticate: ->(request) { request.get_header("HTTP_AUTHORIZATION") == "Bearer s3cret" && { token: "analytics" } },
+                           icons: [{ src: "https://example.com/icon.png", mimeType: "image/png", sizes: ["64x64"] }]
     end
 
     RorMcp.server(:default).add_tool(MCP::Tool.define(
@@ -173,6 +174,14 @@ RSpec.describe RorMcp::Endpoint do
       expect(last_response.status).to eq(200)
       expect(last_response.headers).not_to have_key("mcp-session-id")
       expect(rpc("/mcp/analytics", "tools/list", headers: auth).status).to eq(200)
+    end
+
+    it "advertises its icons in serverInfo to clients that negotiate 2025-11-25 or later" do
+      rpc("/mcp/analytics", "initialize", initialize_params("2025-11-25"), headers: auth)
+      expect(json.dig("result", "serverInfo", "icons"))
+        .to eq([{ "src" => "https://example.com/icon.png", "mimeType" => "image/png", "sizes" => ["64x64"] }])
+      rpc("/mcp/analytics", "initialize", initialize_params, headers: auth)
+      expect(json.dig("result", "serverInfo")).not_to have_key("icons")
     end
 
     it "hands the authenticate result to tools as server_context[:auth_info]" do

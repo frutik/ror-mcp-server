@@ -22,6 +22,7 @@ module RorMcp
       @key = server_config.key
       @name = server_config.name
       @instructions = server_config.instructions
+      @icons = server_config.icons
       @stateless = server_config.stateless
       @authenticator = configuration.authenticator_for(server_config)
       @allowed_origins = configuration.allowed_origins_for(server_config)
@@ -113,6 +114,7 @@ module RorMcp
         name: @name,
         version: RorMcp::VERSION,
         instructions: @instructions,
+        icons: @icons,
         capabilities: CAPABILITIES,
         tools: tools,
       )
