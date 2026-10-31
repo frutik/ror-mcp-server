@@ -448,6 +448,12 @@ RorMcp.configure do |c|
 end
 ```
 
+> **Never use `pipeline_semantics = :parity` in production.** It exists only to compare
+> output with django-mcp-server byte for byte. In `:parity` mode `fields`/`exclude_fields`
+> don't restrict queries: a client can read and filter any column of the queried model and
+> of any model reachable through `belongs_to`, including models that aren't published and
+> columns you left out. Keep the default, `:fixed`.
+
 ---
 
 ## Guides
