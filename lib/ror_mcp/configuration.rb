@@ -11,7 +11,8 @@ module RorMcp
     # One declared server. `authenticate` is nil to inherit the global block,
     # false to disable authentication, or a callable(request) → context | nil.
     # `allowed_origins` is nil to inherit the global list.
-    ServerConfig = Struct.new(:key, :name, :instructions, :stateless, :authenticate, :allowed_origins, keyword_init: true)
+    ServerConfig = Struct.new(:key, :name, :instructions, :stateless, :authenticate, :allowed_origins, :icons,
+                              keyword_init: true)
 
     DESCRIPTION_BUDGET_MODES = %i[warn raise].freeze
 
@@ -63,6 +64,13 @@ module RorMcp
     end
 
     # :any, or origins normalized for comparison ("scheme://host[:port]", lowercase).
+    # Validated at configure time, not when the first request builds the server.
+    def self.icons(icons)
+      MCP::Icon.from_list(icons)
+    rescue ArgumentError => e
+      raise ConfigurationError, "icons: #{e.message}"
+    end
+
     def self.origins(origins)
       return :any if origins == :any
 
@@ -98,7 +106,7 @@ module RorMcp
       server(:default, **options)
     end
 
-    def server(key, name: nil, instructions: nil, stateless: false, authenticate: nil, allowed_origins: nil)
+    def server(key, name: nil, instructions: nil, stateless: false, authenticate: nil, allowed_origins: nil, icons: nil)
       key = key.to_sym
       @servers[key] = ServerConfig.new(
         key: key,
@@ -107,6 +115,7 @@ module RorMcp
         stateless: stateless,
         authenticate: authenticate,
         allowed_origins: allowed_origins.nil? ? nil : Configuration.origins(allowed_origins),
+        icons: Configuration.icons(icons),
       )
     end
 

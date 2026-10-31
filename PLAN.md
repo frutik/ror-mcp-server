@@ -302,7 +302,8 @@ RorMcp.configure do |c|
   c.default_server name: "myapp-catalog", instructions: "…"
   c.server :sales,   name: "myapp-sales",   instructions: "…"
   c.server :support, name: "myapp-support", instructions: "…", stateless: true,
-           authenticate: ->(request) { … }  # per-server override; Django sets auth per mounted view
+           authenticate: ->(request) { … }, # per-server override; Django sets auth per mounted view
+           icons: [{ src: "https://…/icon.png", mimeType: "image/png" }] # serverInfo.icons (upstream #58, unmerged)
 
   c.authenticate do |request|              # → context or nil (401)
     key = ApiKey.check_token(request.authorization.to_s.delete_prefix("Bearer "))

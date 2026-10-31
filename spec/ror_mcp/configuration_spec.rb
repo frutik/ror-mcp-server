@@ -41,6 +41,10 @@ RSpec.describe RorMcp::Configuration do
     end
   end
 
+  it "refuses malformed icons when the server is declared" do
+    expect { config.server(:x, icons: [{ href: "x.png" }]) }.to raise_error(RorMcp::ConfigurationError, /icons\[0\]/)
+  end
+
   it "accepts only known pipeline semantics" do
     config.pipeline_semantics = "parity"
     expect(config.pipeline_semantics).to eq(:parity)
